@@ -1,0 +1,54 @@
+package MustDevLLM;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS OFF}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Must@Dev - AI Integration Module (OTA)'}
+{$DESIGNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  designide,
+  RESTComponents;
+
+contains
+  MustDev.LLM.Interfaces in 'MustDev.LLM.Interfaces.pas',
+  MustDev.LLM.BaseProvider in 'MustDev.LLM.BaseProvider.pas',
+  MustDev.LLM.LocalSocketProvider in 'MustDev.LLM.LocalSocketProvider.pas',
+  MustDev.LLM.CloudRESTProvider in 'MustDev.LLM.CloudRESTProvider.pas',
+  MustDev.LLM.Factory in 'MustDev.LLM.Factory.pas',
+  MustDev.LLM.Security in 'MustDev.LLM.Security.pas',
+  MustDev.LLM.Logger in 'MustDev.LLM.Logger.pas',
+  MustDev.LLM.ProjectManager in 'MustDev.LLM.ProjectManager.pas',
+  MustDev.LLM.PromptOptimizer in 'MustDev.LLM.PromptOptimizer.pas',
+  MustDev.LLM.OptionsFrame in 'MustDev.LLM.OptionsFrame.pas' {LLMOptionsFrame: TFrame},
+  MustDev.LLM.OptionsPage in 'MustDev.LLM.OptionsPage.pas',
+  MustDev.LLM.DockableForm in 'MustDev.LLM.DockableForm.pas' {DockableLLMForm: TForm},
+  MustDev.LLM.EditorIntegration in 'MustDev.LLM.EditorIntegration.pas',
+  MustDev.LLM.Registration in 'MustDev.LLM.Registration.pas';
+
+end.

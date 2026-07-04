@@ -1,0 +1,37 @@
+# Delphi IDE Files
+__history/
+__recovery/
+*.local
+*.identcache
+*.stat
+*.tvsconfig
+*.projdata
+
+# Compiled Binaries and Intermediates
+*.dcu
+*.bpl
+*.dcp
+*.bpi
+*.lib
+*.a
+*.o
+*.so
+*.dylib
+*.exe
+*.dll
+
+# Debug and Resource Files
+*.rsm
+*.map
+*.dres
+
+# Backup and Log Files
+*.~*
+*.bak
+*.log
+
+# Personal/User Specific files
+*.dsk
+
+# Windows Thumbs
+Thumbs.db
