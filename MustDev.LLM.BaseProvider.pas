@@ -23,7 +23,7 @@ type
     function GetProviderType: TProviderType; virtual; abstract;
     function GetModelName: string; virtual;
   public
-    procedure Initialize(const AEndpoint, AApiKey: string; const AModel: string); virtual;
+    procedure InitProvider(const AEndpoint, AApiKey: string; const AModel: string); virtual;
     function Ask(const APrompt: string): string; virtual; abstract;
     
     property ProviderType: TProviderType read GetProviderType;
@@ -34,7 +34,7 @@ implementation
 
 { TBaseLLMProvider }
 
-procedure TBaseLLMProvider.Initialize(const AEndpoint, AApiKey, AModel: string);
+procedure TBaseLLMProvider.InitProvider(const AEndpoint, AApiKey, AModel: string);
 begin
   FEndpoint := AEndpoint;
   FApiKey := AApiKey;

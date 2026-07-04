@@ -11,7 +11,8 @@ unit MustDev.LLM.Factory;
 interface
 
 uses
-  System.SysUtils, MustDev.LLM.Interfaces, MustDev.LLM.LocalSocketProvider, MustDev.LLM.CloudRESTProvider;
+  System.SysUtils, MustDev.LLM.Interfaces, MustDev.LLM.BaseProvider,
+  MustDev.LLM.LocalSocketProvider, MustDev.LLM.CloudRESTProvider;
 
 type
   TLLMProviderFactory = class
@@ -39,7 +40,7 @@ begin
     raise Exception.Create('Type de fournisseur non supporté.');
   end;
   
-  Prov.Initialize(AEndpoint, AApiKey, AModel);
+  Prov.InitProvider(AEndpoint, AApiKey, AModel);
   Result := Prov;
 end;
 
