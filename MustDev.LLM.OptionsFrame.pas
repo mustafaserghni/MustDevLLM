@@ -28,6 +28,9 @@ type
     edtApiKey: TEdit;
     Label3: TLabel;
     cbModel: TComboBox;
+    btnRefreshModels: TButton;
+    LabelCloudType: TLabel;
+    cbCloudType: TComboBox;
     btnSave: TButton;
     GroupBox2: TGroupBox;
     Label4: TLabel;
@@ -41,6 +44,7 @@ type
     memoPromptRefactor: TMemo;
     procedure btnSaveClick(Sender: TObject);
     procedure rgProviderTypeClick(Sender: TObject);
+    procedure btnRefreshModelsClick(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
@@ -53,7 +57,7 @@ implementation
 {$R *.dfm}
 
 uses
-  MustDev.LLM.Security, MustDev.LLM.Interfaces, System.Win.Registry;
+  MustDev.LLM.Security, MustDev.LLM.Interfaces, MustDev.LLM.LocalSocketProvider, System.Win.Registry;
 
 { TLLMOptionsFrame }
 
@@ -84,6 +88,11 @@ begin
       if Reg.ValueExists('Model') then
         cbModel.Text := Reg.ReadString('Model');
         
+      if Reg.ValueExists('CloudType') then
+        cbCloudType.ItemIndex := Reg.ReadInteger('CloudType')
+      else
+        cbCloudType.ItemIndex := 0;
+        
       // Tab Raccourcis
       if Reg.ValueExists('ShortcutAutocomplete') then
         edtShortcutAutocomplete.Text := Reg.ReadString('ShortcutAutocomplete')
@@ -113,6 +122,7 @@ begin
       // Valeurs par défaut si le registre n'existe pas encore
       edtShortcutAutocomplete.Text := 'Ctrl+Alt+Space';
       edtShortcutRefactor.Text := 'Ctrl+Alt+R';
+      cbCloudType.ItemIndex := 0;
       memoPromptAutocomplete.Text := 'Complète ce code Delphi à partir de la position du curseur. Retourne UNIQUEMENT le code complété, sans aucun texte explicatif ni markdown.';
       memoPromptRefactor.Text := 'Tu es un expert Delphi senior. Refactore le code suivant pour l''optimiser, le moderniser et le sécuriser. Retourne UNIQUEMENT le code, sans markdown.';
     end;
@@ -136,6 +146,7 @@ begin
       Reg.WriteInteger('ProviderType', rgProviderType.ItemIndex);
       Reg.WriteString('Endpoint', edtEndpoint.Text);
       Reg.WriteString('Model', cbModel.Text);
+      Reg.WriteInteger('CloudType', cbCloudType.ItemIndex);
       
       Reg.WriteString('ShortcutAutocomplete', edtShortcutAutocomplete.Text);
       Reg.WriteString('ShortcutRefactor', edtShortcutRefactor.Text);
@@ -160,19 +171,55 @@ end;
 
 procedure TLLMOptionsFrame.rgProviderTypeClick(Sender: TObject);
 begin
-  if rgProviderType.ItemIndex = 0 then
+  if rgProviderType.ItemIndex = 0 then // Local
   begin
     edtApiKey.Enabled := False;
     edtApiKey.Color := clBtnFace;
+    cbCloudType.Enabled := False;
+    cbCloudType.Color := clBtnFace;
+    btnRefreshModels.Enabled := True;
+    
     if edtEndpoint.Text = '' then
       edtEndpoint.Text := 'http://127.0.0.1:11434/api/generate';
   end
-  else
+  else // Cloud
   begin
     edtApiKey.Enabled := True;
     edtApiKey.Color := clWindow;
+    cbCloudType.Enabled := True;
+    cbCloudType.Color := clWindow;
+    btnRefreshModels.Enabled := False;
+    
     if edtEndpoint.Text = 'http://127.0.0.1:11434/api/generate' then
       edtEndpoint.Text := 'https://api.openai.com/v1/chat/completions';
+  end;
+end;
+
+procedure TLLMOptionsFrame.btnRefreshModelsClick(Sender: TObject);
+var
+  Models: TArray<string>;
+  I: Integer;
+begin
+  if rgProviderType.ItemIndex <> 0 then Exit;
+  
+  Screen.Cursor := crHourGlass;
+  try
+    Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text);
+    if Length(Models) > 0 then
+    begin
+      cbModel.Items.Clear;
+      for I := Low(Models) to High(Models) do
+        cbModel.Items.Add(Models[I]);
+        
+      if cbModel.Items.Count > 0 then
+        cbModel.ItemIndex := 0;
+        
+      ShowMessage('Modèles locaux récupérés avec succès.');
+    end
+    else
+      ShowMessage('Aucun modèle trouvé. Vérifiez que votre serveur local tourne sur l''URL indiquée.');
+  finally
+    Screen.Cursor := crDefault;
   end;
 end;
 

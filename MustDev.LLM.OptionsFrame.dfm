@@ -16,9 +16,9 @@ object LLMOptionsFrame: TLLMOptionsFrame
       Caption = 'Fournisseur d''IA'
       object rgProviderType: TRadioGroup
         Left = 16
-        Top = 16
+        Top = 10
         Width = 400
-        Height = 65
+        Height = 55
         Caption = ' Type de fournisseur d''IA '
         ItemIndex = 0
         Items.Strings = (
@@ -29,9 +29,9 @@ object LLMOptionsFrame: TLLMOptionsFrame
       end
       object GroupBox1: TGroupBox
         Left = 16
-        Top = 96
+        Top = 75
         Width = 400
-        Height = 150
+        Height = 190
         Caption = ' Param'#232'tres '
         TabOrder = 1
         object Label1: TLabel
@@ -48,41 +48,62 @@ object LLMOptionsFrame: TLLMOptionsFrame
           Height = 15
           Caption = 'Cl'#233' API :'
         end
-        object Label3: TLabel
+        object LabelCloudType: TLabel
           Left = 16
           Top = 104
+          Width = 65
+          Height = 15
+          Caption = 'API Cloud :'
+        end
+        object Label3: TLabel
+          Left = 16
+          Top = 144
           Width = 45
           Height = 15
           Caption = 'Mod'#232'le :'
         end
         object edtEndpoint: TEdit
-          Left = 104
+          Left = 90
           Top = 21
-          Width = 270
+          Width = 290
           Height = 23
           TabOrder = 0
         end
         object edtApiKey: TEdit
-          Left = 104
+          Left = 90
           Top = 61
-          Width = 270
+          Width = 290
           Height = 23
           PasswordChar = '*'
           TabOrder = 1
         end
-        object cbModel: TComboBox
-          Left = 104
+        object cbCloudType: TComboBox
+          Left = 90
           Top = 101
-          Width = 270
+          Width = 290
           Height = 23
+          Style = csDropDownList
           TabOrder = 2
           Items.Strings = (
-            'llama3'
-            'mistral'
-            'gpt-3.5-turbo'
-            'gpt-4o'
-            'gemini-1.5-pro'
-            'claude-3-opus')
+            'OpenAI / DeepSeek / QWen (Standard)'
+            'Google Gemini'
+            'Anthropic Claude')
+        end
+        object cbModel: TComboBox
+          Left = 90
+          Top = 141
+          Width = 195
+          Height = 23
+          TabOrder = 3
+        end
+        object btnRefreshModels: TButton
+          Left = 290
+          Top = 140
+          Width = 90
+          Height = 25
+          Caption = 'Actualiser'
+          TabOrder = 4
+          OnClick = btnRefreshModelsClick
         end
       end
     end
