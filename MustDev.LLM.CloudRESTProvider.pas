@@ -22,7 +22,7 @@ type
   protected
     function GetProviderType: TProviderType; override;
   public
-    constructor Create(const AEndpoint, AApiKey, AModel: string; ACloudType: Integer); reintroduce;
+    procedure SetCloudType(ACloudType: Integer);
     function Ask(const APrompt: string): string; override;
   end;
 
@@ -30,9 +30,8 @@ implementation
 
 { TCloudRESTLLMProvider }
 
-constructor TCloudRESTLLMProvider.Create(const AEndpoint, AApiKey, AModel: string; ACloudType: Integer);
+procedure TCloudRESTLLMProvider.SetCloudType(ACloudType: Integer);
 begin
-  inherited Create(AEndpoint, AApiKey, AModel);
   FCloudType := ACloudType;
 end;
 

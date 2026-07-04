@@ -25,13 +25,22 @@ implementation
 { TLLMProviderFactory }
 
 class function TLLMProviderFactory.CreateProvider(AType: TProviderType; const AEndpoint, AApiKey, AModel: string; ACloudType: Integer): ILLMProvider;
+var
+  Prov: TBaseLLMProvider;
 begin
   case AType of
-    ptLocalSocket: Result := TLocalSocketLLMProvider.Create(AEndpoint, AApiKey, AModel);
-    ptCloudREST: Result := TCloudRESTLLMProvider.Create(AEndpoint, AApiKey, AModel, ACloudType);
+    ptLocalSocket: Prov := TLocalSocketLLMProvider.Create;
+    ptCloudREST: 
+      begin
+        Prov := TCloudRESTLLMProvider.Create;
+        TCloudRESTLLMProvider(Prov).SetCloudType(ACloudType);
+      end;
   else
     raise Exception.Create('Type de fournisseur non supporté.');
   end;
+  
+  Prov.Initialize(AEndpoint, AApiKey, AModel);
+  Result := Prov;
 end;
 
 end.
