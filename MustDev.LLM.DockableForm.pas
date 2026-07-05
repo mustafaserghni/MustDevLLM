@@ -65,7 +65,16 @@ end;
 
 procedure TDockableLLMForm.FormCreate(Sender: TObject);
 begin
-  lblSource.Caption := 'Source : Non initialisé';
+  Caption := 'Must@Dev - AI Assistant';
+  
+  // Raccourcis / Actions de la barre d'outils
+  btnSettings.Caption := ' '#$2699' Param'#232'tres ';
+  btnClearHistory.Caption := ' '#$D83D#$DDD1' Nouvelle conversation ';
+  
+  lblSource.Caption := 'Source : Non initialis'#233;';
+  chkOptimizeContext.Caption := 'Optimiser le prompt avec le contexte (Agents.md)';
+  btnAsk.Caption := 'Envoyer';
+  
   richChat.Clear;
   richChat.Font.Name := 'Segoe UI';
   richChat.Font.Size := 10;

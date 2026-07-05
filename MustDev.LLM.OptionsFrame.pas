@@ -70,6 +70,36 @@ uses
 constructor TLLMOptionsFrame.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  
+  // Correction des accents et emojis en code pour éviter le parser DFM (ANSI/UTF-8)
+  TabGeneral.Caption := 'Connexion LLM';
+  TabShortcuts.Caption := 'Raccourcis';
+  TabPrompts.Caption := 'System Prompts';
+  
+  lblTitleGeneral.Caption := 'Configuration du fournisseur';
+  lblTitleShortcuts.Caption := 'Raccourcis clavier de l''IDE';
+  lblTitlePrompts.Caption := 'Prompts Syst'#232'me de l''Assistant';
+  
+  rgProviderType.Caption := ' Type de fournisseur d''IA ';
+  rgProviderType.Items.Clear;
+  rgProviderType.Items.Add('Serveur Local (Ollama, LM Studio)');
+  rgProviderType.Items.Add('API Cloud (OpenAI, Gemini, Claude)');
+  
+  lblQuickProfile.Caption := 'Profil Rapide :';
+  lblEndpoint.Caption := 'URL de l''API :';
+  lblApiKey.Caption := 'Cl'#233' API :';
+  lblCloudType.Caption := 'API Cloud :';
+  lblModel.Caption := 'Mod'#232'le :';
+  btnRefreshModels.Caption := #$D83D#$DD04' Actualiser'; // Émoji de rafraîchissement
+  
+  lblShortcutAutocomplete.Caption := 'Autocompl'#233'tion :';
+  lblShortcutRefactor.Caption := 'Refactoring :';
+  
+  lblPromptAutocomplete.Caption := 'Autocompl'#233'tion :';
+  lblPromptRefactor.Caption := 'Refactoring :';
+  
+  btnSave.Caption := 'Sauvegarder';
+  
   LoadSettings;
 end;
 

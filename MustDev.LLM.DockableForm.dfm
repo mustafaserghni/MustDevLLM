@@ -26,13 +26,13 @@ object DockableLLMForm: TDockableLLMForm
     object btnSettings: TToolButton
       Left = 0
       Top = 0
-      Caption = ' ⚙️ Paramètres '
+      Caption = ' Parametres '
       OnClick = btnSettingsClick
     end
     object btnClearHistory: TToolButton
       Left = 88
       Top = 0
-      Caption = ' 🗑️ Nouvelle conversation '
+      Caption = ' Nouvelle conversation '
       OnClick = btnClearHistoryClick
     end
   end
@@ -49,7 +49,7 @@ object DockableLLMForm: TDockableLLMForm
       Top = 8
       Width = 111
       Height = 15
-      Caption = 'Source : Non initialisé'
+      Caption = 'Source : Non initialise'
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clHotLight
       Font.Height = -12

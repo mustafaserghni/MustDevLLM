@@ -50,9 +50,9 @@ var
 begin
   FSettingsForm := TForm.Create(nil);
   try
-    FSettingsForm.Caption := 'Paramètres Must@Dev AI';
-    FSettingsForm.Width := 480;
-    FSettingsForm.Height := 400;
+    FSettingsForm.Caption := 'Param'#232'tres Must@Dev AI';
+    FSettingsForm.Width := 500;
+    FSettingsForm.Height := 460;
     FSettingsForm.Position := poScreenCenter;
     FSettingsForm.BorderStyle := bsDialog;
     
@@ -103,7 +103,7 @@ begin
     
     // B. Génération des fichiers MD Agent
     MustDevAgentFilesMenuItem := TMenuItem.Create(MustDevMainMenu);
-    MustDevAgentFilesMenuItem.Caption := 'Générer les fichiers Agent (MD)';
+    MustDevAgentFilesMenuItem.Caption := 'G'#233'n'#233'rer les fichiers Agent (MD)';
     MustDevAgentFilesMenuItem.OnClick := TMustDevMenuHandler.GenerateAgentFilesClick;
     MustDevMainMenu.Add(MustDevAgentFilesMenuItem);
     
