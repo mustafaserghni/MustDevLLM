@@ -1,5 +1,7 @@
 unit MustDev.LLM.DockableForm;
 
+{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
+
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -67,11 +69,11 @@ procedure TDockableLLMForm.FormCreate(Sender: TObject);
 begin
   Caption := 'Must@Dev - AI Assistant';
   
-  // Raccourcis / Actions de la barre d'outils
-  btnSettings.Caption := ' '#$2699' Param'#232'tres ';
-  btnClearHistory.Caption := ' '#$D83D#$DDD1' Nouvelle conversation ';
+  // Raccourcis / Actions de la barre d'outils avec caractères accentués standards
+  btnSettings.Caption := ' ⚙️ Paramètres ';
+  btnClearHistory.Caption := ' 🗑️ Nouvelle conversation ';
   
-  lblSource.Caption := 'Source : Non initialis'#233;';
+  lblSource.Caption := 'Source : Non initialisé';
   chkOptimizeContext.Caption := 'Optimiser le prompt avec le contexte (Agents.md)';
   btnAsk.Caption := 'Envoyer';
   
@@ -192,16 +194,15 @@ begin
       ResponseText, FinalPrompt: string;
     begin
       try
-        // Si l'optimisation est activée, on injecte les fichiers Agent et règles Delphi
         if OptimizeContext then
           FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, '')
         else
           FinalPrompt := UserPrompt;
           
-        // Envoi avec AKeepHistory = True pour conserver la mémoire de la conversation
         ResponseText := FProvider.Ask(FinalPrompt, True);
         
-        TThread.Queue(nil,
+        // Qualification complète System.Classes.TThread.Queue pour éviter l'erreur de surcharge VCL
+        System.Classes.TThread.Queue(nil,
           procedure
           begin
             AddChatMsg('Must@Dev AI', ResponseText, False);
@@ -211,7 +212,7 @@ begin
       except
         on E: Exception do
         begin
-          TThread.Queue(nil,
+          System.Classes.TThread.Queue(nil,
             procedure
             begin
               AddChatMsg('Erreur', E.Message, False);

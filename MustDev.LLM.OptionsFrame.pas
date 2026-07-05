@@ -1,5 +1,7 @@
 unit MustDev.LLM.OptionsFrame;
 
+{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
+
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -71,14 +73,14 @@ constructor TLLMOptionsFrame.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   
-  // Correction des accents et emojis en code pour éviter le parser DFM (ANSI/UTF-8)
+  // Assignation directe des textes avec accents standards
   TabGeneral.Caption := 'Connexion LLM';
   TabShortcuts.Caption := 'Raccourcis';
   TabPrompts.Caption := 'System Prompts';
   
   lblTitleGeneral.Caption := 'Configuration du fournisseur';
   lblTitleShortcuts.Caption := 'Raccourcis clavier de l''IDE';
-  lblTitlePrompts.Caption := 'Prompts Syst'#232'me de l''Assistant';
+  lblTitlePrompts.Caption := 'Prompts Système de l''Assistant';
   
   rgProviderType.Caption := ' Type de fournisseur d''IA ';
   rgProviderType.Items.Clear;
@@ -87,15 +89,15 @@ begin
   
   lblQuickProfile.Caption := 'Profil Rapide :';
   lblEndpoint.Caption := 'URL de l''API :';
-  lblApiKey.Caption := 'Cl'#233' API :';
+  lblApiKey.Caption := 'Clé API :';
   lblCloudType.Caption := 'API Cloud :';
-  lblModel.Caption := 'Mod'#232'le :';
-  btnRefreshModels.Caption := #$D83D#$DD04' Actualiser'; // Émoji de rafraîchissement
+  lblModel.Caption := 'Modèle :';
+  btnRefreshModels.Caption := '🔄 Actualiser';
   
-  lblShortcutAutocomplete.Caption := 'Autocompl'#233'tion :';
+  lblShortcutAutocomplete.Caption := 'Autocomplétion :';
   lblShortcutRefactor.Caption := 'Refactoring :';
   
-  lblPromptAutocomplete.Caption := 'Autocompl'#233'tion :';
+  lblPromptAutocomplete.Caption := 'Autocomplétion :';
   lblPromptRefactor.Caption := 'Refactoring :';
   
   btnSave.Caption := 'Sauvegarder';

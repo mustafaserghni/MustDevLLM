@@ -1,5 +1,7 @@
 unit MustDev.LLM.Registration;
 
+{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
+
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -50,7 +52,7 @@ var
 begin
   FSettingsForm := TForm.Create(nil);
   try
-    FSettingsForm.Caption := 'Param'#232'tres Must@Dev AI';
+    FSettingsForm.Caption := 'Paramètres Must@Dev AI';
     FSettingsForm.Width := 500;
     FSettingsForm.Height := 460;
     FSettingsForm.Position := poScreenCenter;
@@ -103,7 +105,7 @@ begin
     
     // B. Génération des fichiers MD Agent
     MustDevAgentFilesMenuItem := TMenuItem.Create(MustDevMainMenu);
-    MustDevAgentFilesMenuItem.Caption := 'G'#233'n'#233'rer les fichiers Agent (MD)';
+    MustDevAgentFilesMenuItem.Caption := 'Générer les fichiers Agent (MD)';
     MustDevAgentFilesMenuItem.OnClick := TMustDevMenuHandler.GenerateAgentFilesClick;
     MustDevMainMenu.Add(MustDevAgentFilesMenuItem);
     
