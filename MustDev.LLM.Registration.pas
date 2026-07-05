@@ -1,6 +1,5 @@
+{$CODEPAGE 65001}
 unit MustDev.LLM.Registration;
-
-{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
 
 { ************************************************************************** }
 {                                                                            }
