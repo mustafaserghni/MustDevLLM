@@ -1,147 +1,205 @@
 object LLMOptionsFrame: TLLMOptionsFrame
   Left = 0
   Top = 0
-  Width = 450
-  Height = 350
+  Width = 480
+  Height = 420
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -12
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  ParentFont = False
   TabOrder = 0
   object PageControl1: TPageControl
     Left = 0
     Top = 0
-    Width = 450
-    Height = 310
+    Width = 480
+    Height = 370
     ActivePage = TabGeneral
     Align = alTop
     TabOrder = 0
     object TabGeneral: TTabSheet
-      Caption = 'Fournisseur d''IA'
+      Caption = 'Connexion LLM'
+      object lblTitleGeneral: TLabel
+        Left = 16
+        Top = 12
+        Width = 186
+        Height = 17
+        Caption = 'Configuration du fournisseur'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clHighlight
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
       object rgProviderType: TRadioGroup
         Left = 16
-        Top = 10
-        Width = 400
+        Top = 38
+        Width = 440
         Height = 55
-        Caption = ' Type de fournisseur d''IA '
+        Columns = 2
         ItemIndex = 0
         Items.Strings = (
-          'Fournisseur Local (Ollama, LM Studio)'
-          'Fournisseur Cloud (OpenAI, Gemini, Claude)')
+          'Serveur Local (Ollama, LM Studio)'
+          'API Cloud (OpenAI, Gemini, Claude)')
         TabOrder = 0
         OnClick = rgProviderTypeClick
       end
-      object GroupBox1: TGroupBox
+      object pnlGeneralConfig: TPanel
         Left = 16
-        Top = 75
-        Width = 400
-        Height = 190
-        Caption = ' Param'#232'tres '
+        Top = 102
+        Width = 440
+        Height = 225
+        BevelOuter = bvNone
+        ParentBackground = True
         TabOrder = 1
-        object Label1: TLabel
-          Left = 16
-          Top = 24
-          Width = 63
+        object lblQuickProfile: TLabel
+          Left = 10
+          Top = 13
+          Width = 72
           Height = 15
-          Caption = 'URL / Port :'
+          Caption = 'Profil Rapide :'
         end
-        object Label2: TLabel
-          Left = 16
-          Top = 64
+        object lblEndpoint: TLabel
+          Left = 10
+          Top = 53
+          Width = 59
+          Height = 15
+          Caption = 'URL de l''API :'
+        end
+        object lblApiKey: TLabel
+          Left = 10
+          Top = 93
           Width = 45
           Height = 15
-          Caption = 'Cl'#233' API :'
+          Caption = 'Clé API :'
         end
-        object LabelCloudType: TLabel
-          Left = 16
-          Top = 104
-          Width = 65
+        object lblCloudType: TLabel
+          Left = 10
+          Top = 133
+          Width = 57
           Height = 15
           Caption = 'API Cloud :'
         end
-        object Label3: TLabel
-          Left = 16
-          Top = 144
-          Width = 45
+        object lblModel: TLabel
+          Left = 10
+          Top = 173
+          Width = 46
           Height = 15
-          Caption = 'Mod'#232'le :'
+          Caption = 'Modèle :'
+        end
+        object cbQuickProfile: TComboBox
+          Left = 90
+          Top = 10
+          Width = 340
+          Height = 23
+          Style = csDropDownList
+          TabOrder = 0
+          OnChange = cbQuickProfileChange
+          Items.Strings = (
+            'Ollama (Localhost - 11434)'
+            'LM Studio (Localhost - 1234)'
+            'OpenAI (Cloud GPT)'
+            'Google Gemini (Cloud)'
+            'Anthropic Claude (Cloud)'
+            'Alibaba Qwen (Cloud Compatible)'
+            'DeepSeek (Cloud Compatible)')
         end
         object edtEndpoint: TEdit
           Left = 90
-          Top = 21
-          Width = 290
+          Top = 50
+          Width = 340
           Height = 23
-          TabOrder = 0
+          TabOrder = 1
         end
         object edtApiKey: TEdit
           Left = 90
-          Top = 61
-          Width = 290
+          Top = 90
+          Width = 340
           Height = 23
           PasswordChar = '*'
-          TabOrder = 1
+          TabOrder = 2
         end
         object cbCloudType: TComboBox
           Left = 90
-          Top = 101
-          Width = 290
+          Top = 130
+          Width = 340
           Height = 23
           Style = csDropDownList
-          TabOrder = 2
+          TabOrder = 3
           Items.Strings = (
-            'OpenAI / DeepSeek / QWen (Standard)'
+            'OpenAI / DeepSeek / Qwen (Standard)'
             'Google Gemini'
             'Anthropic Claude')
         end
         object cbModel: TComboBox
           Left = 90
-          Top = 141
-          Width = 195
+          Top = 170
+          Width = 230
           Height = 23
-          TabOrder = 3
+          TabOrder = 4
         end
         object btnRefreshModels: TButton
-          Left = 290
-          Top = 140
-          Width = 90
+          Left = 330
+          Top = 169
+          Width = 100
           Height = 25
-          Caption = 'Actualiser'
-          TabOrder = 4
+          Caption = '🔄 Actualiser'
+          TabOrder = 5
           OnClick = btnRefreshModelsClick
         end
       end
     end
     object TabShortcuts: TTabSheet
-      Caption = 'Raccourcis '#201'diteur'
+      Caption = 'Raccourcis'
       ImageIndex = 1
-      object GroupBox2: TGroupBox
+      object lblTitleShortcuts: TLabel
         Left = 16
-        Top = 16
-        Width = 400
+        Top = 12
+        Width = 174
+        Height = 17
+        Caption = 'Raccourcis clavier de l''IDE'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clHighlight
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
+      object pnlShortcuts: TPanel
+        Left = 16
+        Top = 42
+        Width = 440
         Height = 150
-        Caption = ' Raccourcis Clavier '
+        BevelOuter = bvNone
+        ParentBackground = True
         TabOrder = 0
-        object Label4: TLabel
-          Left = 16
-          Top = 32
-          Width = 90
+        object lblShortcutAutocomplete: TLabel
+          Left = 10
+          Top = 23
+          Width = 98
           Height = 15
-          Caption = 'Autocompl'#233'tion :'
+          Caption = 'Autocomplétion :'
         end
-        object Label5: TLabel
-          Left = 16
-          Top = 80
-          Width = 65
+        object lblShortcutRefactor: TLabel
+          Left = 10
+          Top = 73
+          Width = 67
           Height = 15
           Caption = 'Refactoring :'
         end
         object edtShortcutAutocomplete: TEdit
-          Left = 120
-          Top = 29
-          Width = 250
+          Left = 130
+          Top = 20
+          Width = 290
           Height = 23
           TabOrder = 0
         end
         object edtShortcutRefactor: TEdit
-          Left = 120
-          Top = 77
-          Width = 250
+          Left = 130
+          Top = 70
+          Width = 290
           Height = 23
           TabOrder = 1
         end
@@ -150,40 +208,54 @@ object LLMOptionsFrame: TLLMOptionsFrame
     object TabPrompts: TTabSheet
       Caption = 'System Prompts'
       ImageIndex = 2
-      object GroupBox3: TGroupBox
+      object lblTitlePrompts: TLabel
         Left = 16
-        Top = 16
-        Width = 400
-        Height = 250
-        Caption = ' Instructions syst'#232'me par d'#233'faut '
+        Top = 12
+        Width = 188
+        Height = 17
+        Caption = 'Prompts Système de l''Assistant'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clHighlight
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = [fsBold]
+        ParentFont = False
+      end
+      object pnlPrompts: TPanel
+        Left = 16
+        Top = 38
+        Width = 440
+        Height = 285
+        BevelOuter = bvNone
+        ParentBackground = True
         TabOrder = 0
-        object Label6: TLabel
-          Left = 16
-          Top = 24
-          Width = 90
+        object lblPromptAutocomplete: TLabel
+          Left = 10
+          Top = 10
+          Width = 98
           Height = 15
-          Caption = 'Autocompl'#233'tion :'
+          Caption = 'Autocomplétion :'
         end
-        object Label7: TLabel
-          Left = 16
-          Top = 136
-          Width = 65
+        object lblPromptRefactor: TLabel
+          Left = 10
+          Top = 145
+          Width = 67
           Height = 15
           Caption = 'Refactoring :'
         end
         object memoPromptAutocomplete: TMemo
-          Left = 16
-          Top = 45
-          Width = 360
-          Height = 75
+          Left = 10
+          Top = 30
+          Width = 420
+          Height = 95
           ScrollBars = ssVertical
           TabOrder = 0
         end
         object memoPromptRefactor: TMemo
-          Left = 16
-          Top = 157
-          Width = 360
-          Height = 75
+          Left = 10
+          Top = 165
+          Width = 420
+          Height = 95
           ScrollBars = ssVertical
           TabOrder = 1
         end
@@ -191,11 +263,17 @@ object LLMOptionsFrame: TLLMOptionsFrame
     end
   end
   object btnSave: TButton
-    Left = 336
-    Top = 316
-    Width = 100
-    Height = 25
+    Left = 356
+    Top = 382
+    Width = 110
+    Height = 28
     Caption = 'Sauvegarder'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -12
+    Font.Name = 'Segoe UI'
+    Font.Style = [fsBold]
+    ParentFont = False
     TabOrder = 1
     OnClick = btnSaveClick
   end

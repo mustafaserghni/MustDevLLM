@@ -23,7 +23,7 @@ type
     function GetProviderType: TProviderType; override;
   public
     procedure SetCloudType(ACloudType: Integer);
-    function Ask(const APrompt: string): string; override;
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string; override;
   end;
 
 implementation
@@ -40,7 +40,7 @@ begin
   Result := ptCloudREST;
 end;
 
-function TCloudRESTLLMProvider.Ask(const APrompt: string): string;
+function TCloudRESTLLMProvider.Ask(const APrompt: string; AKeepHistory: Boolean = False): string;
 var
   RestClient: TRESTClient;
   RestRequest: TRESTRequest;
@@ -48,6 +48,7 @@ var
   JSONPayload: TJSONObject;
   MessagesArray, PartsArray: TJSONArray;
   MessageObj, PartObj, RespJSON: TJSONObject;
+  Msg: TLLMMessage;
 begin
   Result := '';
   
@@ -62,20 +63,41 @@ begin
     
     if FCloudType = 1 then // Gemini (Google)
     begin
-      // Structure JSON pour Gemini
       MessagesArray := TJSONArray.Create;
+      
+      // Injection de l'historique
+      if AKeepHistory then
+      begin
+        for Msg in FHistory do
+        begin
+          MessageObj := TJSONObject.Create;
+          PartsArray := TJSONArray.Create;
+          PartObj := TJSONObject.Create;
+          PartObj.AddPair('text', Msg.Content);
+          PartsArray.AddElement(PartObj);
+          
+          var GemRole := Msg.Role;
+          if GemRole = 'assistant' then GemRole := 'model';
+          
+          MessageObj.AddPair('role', GemRole);
+          MessageObj.AddPair('parts', PartsArray);
+          MessagesArray.AddElement(MessageObj);
+        end;
+      end;
+      
+      // Message courant
       MessageObj := TJSONObject.Create;
       PartsArray := TJSONArray.Create;
       PartObj := TJSONObject.Create;
-      
       PartObj.AddPair('text', APrompt);
       PartsArray.AddElement(PartObj);
+      MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('parts', PartsArray);
       MessagesArray.AddElement(MessageObj);
       
       JSONPayload.AddPair('contents', MessagesArray);
       
-      // L'API Key de Gemini passe souvent dans l'URL (si non configurée dans le Header)
+      // API Key
       if (FApiKey <> '') and (Pos('key=', FEndpoint) = 0) then
       begin
         if Pos('?', FEndpoint) > 0 then
@@ -83,17 +105,28 @@ begin
         else
           RestClient.BaseURL := FEndpoint + '?key=' + FApiKey;
       end;
-      
-      // Alternative: Header x-goog-api-key
       RestRequest.Params.AddHeader('x-goog-api-key', FApiKey);
     end
     else if FCloudType = 2 then // Claude (Anthropic)
     begin
-      // Structure JSON pour Claude
       JSONPayload.AddPair('model', FModel);
-      JSONPayload.AddPair('max_tokens', TJSONNumber.Create(4096)); // Requis par l'API Claude
+      JSONPayload.AddPair('max_tokens', TJSONNumber.Create(4096));
       
       MessagesArray := TJSONArray.Create;
+      
+      // Injection de l'historique
+      if AKeepHistory then
+      begin
+        for Msg in FHistory do
+        begin
+          MessageObj := TJSONObject.Create;
+          MessageObj.AddPair('role', Msg.Role);
+          MessageObj.AddPair('content', Msg.Content);
+          MessagesArray.AddElement(MessageObj);
+        end;
+      end;
+      
+      // Message courant
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
@@ -101,17 +134,29 @@ begin
       
       JSONPayload.AddPair('messages', MessagesArray);
       
-      // Headers spécifiques Anthropic
       if FApiKey <> '' then
         RestRequest.Params.AddHeader('x-api-key', FApiKey);
       RestRequest.Params.AddHeader('anthropic-version', '2023-06-01');
     end
     else // 0 = OpenAI / DeepSeek / QWen / Standard
     begin
-      // Structure JSON Standard (OpenAI)
       JSONPayload.AddPair('model', FModel);
       
       MessagesArray := TJSONArray.Create;
+      
+      // Injection de l'historique
+      if AKeepHistory then
+      begin
+        for Msg in FHistory do
+        begin
+          MessageObj := TJSONObject.Create;
+          MessageObj.AddPair('role', Msg.Role);
+          MessageObj.AddPair('content', Msg.Content);
+          MessagesArray.AddElement(MessageObj);
+        end;
+      end;
+      
+      // Message courant
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
@@ -119,14 +164,11 @@ begin
       
       JSONPayload.AddPair('messages', MessagesArray);
       
-      // Header standard
       if FApiKey <> '' then
         RestRequest.Params.AddHeader('Authorization', 'Bearer ' + FApiKey);
     end;
 
     RestRequest.AddBody(JSONPayload.ToString, ctAPPLICATION_JSON);
-    
-    // Exécution de la requête REST (Bloquante mais déjà dans un thread via l'appelant)
     RestRequest.Execute;
     
     if RestResponse.StatusCode = 200 then
@@ -171,6 +213,13 @@ begin
             if Assigned(MsgNode) then
               Result := MsgNode.GetValue<string>('content');
           end;
+        end;
+        
+        // Enregistrement dans l'historique si demandé
+        if AKeepHistory and (Result <> '') then
+        begin
+          AddToHistory('user', APrompt);
+          AddToHistory('assistant', Result);
         end;
       end;
     end

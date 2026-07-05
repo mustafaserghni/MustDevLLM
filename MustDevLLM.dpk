@@ -13,8 +13,8 @@ package MustDevLLM;
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
 {$OPTIMIZATION OFF}
-{$OVERFLOWCHECKS OFF}
-{$RANGECHECKS OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
 {$REFERENCEINFO ON}
 {$SAFEDIVIDE OFF}
 {$STACKFRAMES ON}
@@ -51,4 +51,4 @@ contains
   MustDev.LLM.EditorIntegration in 'MustDev.LLM.EditorIntegration.pas',
   MustDev.LLM.Registration in 'MustDev.LLM.Registration.pas';
 
-end.
+End.

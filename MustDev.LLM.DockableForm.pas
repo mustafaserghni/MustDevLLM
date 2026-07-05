@@ -20,6 +20,7 @@ type
   TDockableLLMForm = class(TDockableForm)
     ToolBar1: TToolBar;
     btnSettings: TToolButton;
+    btnClearHistory: TToolButton;
     lblSource: TLabel;
     pnlTop: TPanel;
     richChat: TRichEdit;
@@ -27,9 +28,11 @@ type
     pnlBottom: TPanel;
     memoPrompt: TMemo;
     btnAsk: TButton;
+    chkOptimizeContext: TCheckBox;
     procedure btnAskClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure btnSettingsClick(Sender: TObject);
+    procedure btnClearHistoryClick(Sender: TObject);
   private
     FProvider: ILLMProvider;
     procedure InitProvider;
@@ -64,7 +67,7 @@ procedure TDockableLLMForm.FormCreate(Sender: TObject);
 begin
   lblSource.Caption := 'Source : Non initialisé';
   richChat.Clear;
-  richChat.Font.Name := 'Consolas';
+  richChat.Font.Name := 'Segoe UI';
   richChat.Font.Size := 10;
 end;
 
@@ -72,9 +75,11 @@ procedure TDockableLLMForm.InitProvider;
 var
   Reg: TRegistry;
   LType: TProviderType;
+  LCloudType: Integer;
   LEndpoint, LApiKey, LModel: string;
 begin
   LType := ptLocalSocket;
+  LCloudType := 0;
   LEndpoint := '';
   LModel := '';
   
@@ -85,6 +90,8 @@ begin
     begin
       if Reg.ValueExists('ProviderType') then
         LType := TProviderType(Reg.ReadInteger('ProviderType'));
+      if Reg.ValueExists('CloudType') then
+        LCloudType := Reg.ReadInteger('CloudType');
       if Reg.ValueExists('Endpoint') then
         LEndpoint := Reg.ReadString('Endpoint');
       if Reg.ValueExists('Model') then
@@ -96,7 +103,7 @@ begin
   end;
   
   LApiKey := TSecurityUtils.LoadApiKey('GlobalAPIKey');
-  FProvider := TLLMProviderFactory.CreateProvider(LType, LEndpoint, LApiKey, LModel);
+  FProvider := TLLMProviderFactory.CreateProvider(LType, LEndpoint, LApiKey, LModel, LCloudType);
   
   if FProvider.ProviderType = ptLocalSocket then
     lblSource.Caption := 'Source : Local Socket (' + FProvider.ModelName + ')'
@@ -108,8 +115,11 @@ procedure TDockableLLMForm.AddChatMsg(const ASender, AMessage: string; IsUser: B
 begin
   richChat.SelStart := Length(richChat.Text);
   richChat.SelAttributes.Style := [fsBold];
-  if IsUser then
-    richChat.SelAttributes.Color := clBlue
+  
+  if ASender = 'Système' then
+    richChat.SelAttributes.Color := clGray
+  else if IsUser then
+    richChat.SelAttributes.Color := clHighlight
   else
     richChat.SelAttributes.Color := clGreen;
     
@@ -119,7 +129,7 @@ begin
   richChat.SelAttributes.Style := [];
   richChat.SelAttributes.Color := clWindowText;
   richChat.Lines.Add(AMessage);
-  richChat.Lines.Add(''); // Ligne vide d'espacement
+  richChat.Lines.Add(''); // Espacement
   
   // Scroller en bas
   SendMessage(richChat.Handle, EM_LINESCROLL, 0, richChat.Lines.Count);
@@ -129,6 +139,7 @@ procedure TDockableLLMForm.SetUIBusy(IsBusy: Boolean);
 begin
   btnAsk.Enabled := not IsBusy;
   memoPrompt.Enabled := not IsBusy;
+  btnClearHistory.Enabled := not IsBusy;
   if IsBusy then
   begin
     btnAsk.Caption := 'Patience...';
@@ -144,11 +155,13 @@ end;
 procedure TDockableLLMForm.btnAskClick(Sender: TObject);
 var
   UserPrompt: string;
+  OptimizeContext: Boolean;
 begin
   if Trim(memoPrompt.Text) = '' then Exit;
   
-  InitProvider;
-  
+  if not Assigned(FProvider) then
+    InitProvider;
+    
   if not Assigned(FProvider) then
   begin
     ShowMessage('Veuillez configurer l''extension Must@Dev LLM dans les paramètres.');
@@ -161,18 +174,24 @@ begin
   SetUIBusy(True);
   
   TLLMLogger.LogInfo('Requête LLM déclenchée depuis le Chat (Asynchrone)...');
+  OptimizeContext := chkOptimizeContext.Checked;
   
-  // Multithreading : Ne bloque pas l'IDE !
+  // Multithreading : Exécution en arrière-plan
   TThread.CreateAnonymousThread(
     procedure
     var
-      ResponseText, OptimizedPrompt: string;
+      ResponseText, FinalPrompt: string;
     begin
       try
-        OptimizedPrompt := TPromptOptimizer.Optimize(UserPrompt, '');
-        ResponseText := FProvider.Ask(OptimizedPrompt);
+        // Si l'optimisation est activée, on injecte les fichiers Agent et règles Delphi
+        if OptimizeContext then
+          FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, '')
+        else
+          FinalPrompt := UserPrompt;
+          
+        // Envoi avec AKeepHistory = True pour conserver la mémoire de la conversation
+        ResponseText := FProvider.Ask(FinalPrompt, True);
         
-        // Synchronisation avec le thread principal VCL pour mettre à jour l'UI
         TThread.Queue(nil,
           procedure
           begin
@@ -195,6 +214,19 @@ begin
     end).Start;
 end;
 
+procedure TDockableLLMForm.btnClearHistoryClick(Sender: TObject);
+begin
+  if not Assigned(FProvider) then
+    InitProvider;
+    
+  if Assigned(FProvider) then
+    FProvider.ClearHistory;
+    
+  richChat.Clear;
+  AddChatMsg('Système', 'Historique de la conversation effacé.', False);
+  TLLMLogger.LogInfo('Historique de conversation effacé.');
+end;
+
 procedure TDockableLLMForm.btnSettingsClick(Sender: TObject);
 var
   FSettingsForm: TForm;
@@ -203,8 +235,8 @@ begin
   FSettingsForm := TForm.Create(nil);
   try
     FSettingsForm.Caption := 'Paramètres Must@Dev AI';
-    FSettingsForm.Width := 480;
-    FSettingsForm.Height := 400;
+    FSettingsForm.Width := 500;
+    FSettingsForm.Height := 460;
     FSettingsForm.Position := poScreenCenter;
     FSettingsForm.BorderStyle := bsDialog;
     

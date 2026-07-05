@@ -20,7 +20,7 @@ type
   protected
     function GetProviderType: TProviderType; override;
   public
-    function Ask(const APrompt: string): string; override;
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string; override;
     
     // Interroge l'API locale (Ollama ou LM Studio) pour lister les modèles installés
     class function FetchModels(const AEndpoint: string): TArray<string>;
@@ -35,34 +35,63 @@ begin
   Result := ptLocalSocket;
 end;
 
-function TLocalSocketLLMProvider.Ask(const APrompt: string): string;
+function TLocalSocketLLMProvider.Ask(const APrompt: string; AKeepHistory: Boolean = False): string;
 var
   Http: THTTPClient;
   Resp: IHTTPResponse;
   JSONPayload: TJSONObject;
   StringStream: TStringStream;
+  MessagesArray: TJSONArray;
+  MessageObj: TJSONObject;
+  Msg: TLLMMessage;
+  TargetURL: string;
+  IsOllamaChat: Boolean;
 begin
   Result := '';
-  
   Http := THTTPClient.Create;
   JSONPayload := TJSONObject.Create;
   try
     JSONPayload.AddPair('model', FModel);
     
-    // Pour LM Studio v1 on doit utiliser un format de messages, 
-    // Pour Ollama api/generate on utilise prompt. 
-    // Simplification : si endpoint contient v1, on envoie le format standard OpenAI
-    if Pos('/v1/', FEndpoint) > 0 then
+    TargetURL := FEndpoint;
+    IsOllamaChat := False;
+    
+    // Redirection automatique vers /api/chat pour Ollama si l'historique est demandé
+    if AKeepHistory and (Pos('/api/generate', FEndpoint) > 0) then
     begin
-      var MessagesArray := TJSONArray.Create;
-      var MessageObj := TJSONObject.Create;
+      TargetURL := StringReplace(FEndpoint, '/api/generate', '/api/chat', [rfIgnoreCase]);
+      IsOllamaChat := True;
+    end;
+    
+    if IsOllamaChat or (Pos('/v1/', TargetURL) > 0) then
+    begin
+      // Format chat standard (messages array)
+      MessagesArray := TJSONArray.Create;
+      
+      if AKeepHistory then
+      begin
+        for Msg in FHistory do
+        begin
+          MessageObj := TJSONObject.Create;
+          MessageObj.AddPair('role', Msg.Role);
+          MessageObj.AddPair('content', Msg.Content);
+          MessagesArray.AddElement(MessageObj);
+        end;
+      end;
+      
+      MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
       MessagesArray.AddElement(MessageObj);
+      
       JSONPayload.AddPair('messages', MessagesArray);
+      
+      if IsOllamaChat then
+        JSONPayload.AddPair('stream', TJSONBool.Create(False));
     end
     else
     begin
+      // Format de complétion classique (sans historique)
       JSONPayload.AddPair('prompt', APrompt);
       JSONPayload.AddPair('stream', TJSONBool.Create(False));
     end;
@@ -70,26 +99,44 @@ begin
     StringStream := TStringStream.Create(JSONPayload.ToString, TEncoding.UTF8);
     try
       Http.ContentType := 'application/json';
-      Resp := Http.Post(FEndpoint, StringStream);
+      Resp := Http.Post(TargetURL, StringStream);
       
       if Resp.StatusCode = 200 then
       begin
         var RespJSON := TJSONObject.ParseJSONValue(Resp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
         if Assigned(RespJSON) then
         try
-          if Pos('/v1/', FEndpoint) > 0 then
+          if IsOllamaChat or (Pos('/v1/', TargetURL) > 0) then
           begin
-            var ChoicesArray := RespJSON.GetValue<TJSONArray>('choices');
-            if Assigned(ChoicesArray) and (ChoicesArray.Count > 0) then
+            // Ollama /api/chat renvoie un format { message: { role: ..., content: ... } }
+            // LM Studio /v1/chat/completions renvoie { choices: [ { message: { content: ... } } ] }
+            if IsOllamaChat then
             begin
-              var FirstChoice := ChoicesArray.Items[0] as TJSONObject;
-              var MsgNode := FirstChoice.GetValue<TJSONObject>('message');
+              var MsgNode := RespJSON.GetValue<TJSONObject>('message');
               if Assigned(MsgNode) then
                 Result := MsgNode.GetValue<string>('content');
+            end
+            else
+            begin
+              var ChoicesArray := RespJSON.GetValue<TJSONArray>('choices');
+              if Assigned(ChoicesArray) and (ChoicesArray.Count > 0) then
+              begin
+                var FirstChoice := ChoicesArray.Items[0] as TJSONObject;
+                var MsgNode := FirstChoice.GetValue<TJSONObject>('message');
+                if Assigned(MsgNode) then
+                  Result := MsgNode.GetValue<string>('content');
+              end;
             end;
           end
           else
             Result := RespJSON.GetValue<string>('response');
+            
+          // Enregistrer dans l'historique si demandé
+          if AKeepHistory and (Result <> '') then
+          begin
+            AddToHistory('user', APrompt);
+            AddToHistory('assistant', Result);
+          end;
         finally
           RespJSON.Free;
         end;
@@ -120,18 +167,17 @@ begin
     try
       if Pos('11434', AEndpoint) > 0 then
       begin
-        // Ollama: Remplacer /api/generate par /api/tags
         BaseURL := AEndpoint;
         BaseURL := StringReplace(BaseURL, '/generate', '/tags', [rfIgnoreCase]);
+        BaseURL := StringReplace(BaseURL, '/chat', '/tags', [rfIgnoreCase]);
       end
       else if Pos('/v1/', AEndpoint) > 0 then
       begin
-        // LM Studio: Remplacer /v1/chat/completions par /v1/models
         BaseURL := AEndpoint;
         BaseURL := StringReplace(BaseURL, '/chat/completions', '/models', [rfIgnoreCase]);
       end
       else
-        Exit; // Format inconnu
+        Exit;
         
       Resp := Http.Get(BaseURL);
       if Resp.StatusCode = 200 then
@@ -161,7 +207,6 @@ begin
         end;
       end;
     except
-      // Erreur silencieuse si serveur injoignable
     end;
   finally
     Http.Free;

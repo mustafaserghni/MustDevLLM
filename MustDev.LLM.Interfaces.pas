@@ -17,6 +17,12 @@ type
   // Enumération des types de fournisseurs
   TProviderType = (ptLocalSocket, ptCloudREST);
 
+  // Structure pour stocker l'historique des messages
+  TLLMMessage = record
+    Role: string; // 'user', 'assistant' (ou 'model' pour Gemini)
+    Content: string;
+  end;
+
   // Interface commune pour les fournisseurs LLM
   ILLMProvider = interface
     ['{8A5D6B10-E7A4-4B33-A2C3-D5C2B1B7D14D}']
@@ -24,8 +30,11 @@ type
     // Initialise le fournisseur avec ses paramètres (URL, Port ou Clé API)
     procedure InitProvider(const AEndpoint, AApiKey: string; const AModel: string);
     
-    // Méthode principale pour envoyer un prompt et récupérer une réponse
-    function Ask(const APrompt: string): string;
+    // Méthode principale pour envoyer un prompt et récupérer une réponse (avec ou sans historique)
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string;
+    
+    // Efface l'historique de la conversation
+    procedure ClearHistory;
     
     // Propriétés
     function GetProviderType: TProviderType;

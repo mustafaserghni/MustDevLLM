@@ -21,30 +21,36 @@ type
     TabShortcuts: TTabSheet;
     TabPrompts: TTabSheet;
     rgProviderType: TRadioGroup;
-    GroupBox1: TGroupBox;
-    Label1: TLabel;
+    btnSave: TButton;
+    pnlGeneralConfig: TPanel;
+    lblEndpoint: TLabel;
     edtEndpoint: TEdit;
-    Label2: TLabel;
+    lblApiKey: TLabel;
     edtApiKey: TEdit;
-    Label3: TLabel;
+    lblCloudType: TLabel;
+    cbCloudType: TComboBox;
+    lblModel: TLabel;
     cbModel: TComboBox;
     btnRefreshModels: TButton;
-    LabelCloudType: TLabel;
-    cbCloudType: TComboBox;
-    btnSave: TButton;
-    GroupBox2: TGroupBox;
-    Label4: TLabel;
+    lblQuickProfile: TLabel;
+    cbQuickProfile: TComboBox;
+    pnlShortcuts: TPanel;
+    lblShortcutAutocomplete: TLabel;
     edtShortcutAutocomplete: TEdit;
-    Label5: TLabel;
+    lblShortcutRefactor: TLabel;
     edtShortcutRefactor: TEdit;
-    GroupBox3: TGroupBox;
-    Label6: TLabel;
+    pnlPrompts: TPanel;
+    lblPromptAutocomplete: TLabel;
     memoPromptAutocomplete: TMemo;
-    Label7: TLabel;
+    lblPromptRefactor: TLabel;
     memoPromptRefactor: TMemo;
+    lblTitleGeneral: TLabel;
+    lblTitleShortcuts: TLabel;
+    lblTitlePrompts: TLabel;
     procedure btnSaveClick(Sender: TObject);
     procedure rgProviderTypeClick(Sender: TObject);
     procedure btnRefreshModelsClick(Sender: TObject);
+    procedure cbQuickProfileChange(Sender: TObject);
   private
     procedure LoadSettings;
     procedure SaveSettings;
@@ -76,7 +82,6 @@ begin
     Reg.RootKey := HKEY_CURRENT_USER;
     if Reg.OpenKeyReadOnly('\Software\MustDev\LLMIntegration\Settings') then
     begin
-      // Tab Général
       if Reg.ValueExists('ProviderType') then
         rgProviderType.ItemIndex := Reg.ReadInteger('ProviderType')
       else
@@ -93,7 +98,11 @@ begin
       else
         cbCloudType.ItemIndex := 0;
         
-      // Tab Raccourcis
+      if Reg.ValueExists('QuickProfile') then
+        cbQuickProfile.ItemIndex := Reg.ReadInteger('QuickProfile')
+      else
+        cbQuickProfile.ItemIndex := -1;
+        
       if Reg.ValueExists('ShortcutAutocomplete') then
         edtShortcutAutocomplete.Text := Reg.ReadString('ShortcutAutocomplete')
       else
@@ -104,7 +113,6 @@ begin
       else
         edtShortcutRefactor.Text := 'Ctrl+Alt+R';
         
-      // Tab Prompts
       if Reg.ValueExists('PromptAutocomplete') then
         memoPromptAutocomplete.Text := Reg.ReadString('PromptAutocomplete')
       else
@@ -119,10 +127,10 @@ begin
     end
     else
     begin
-      // Valeurs par défaut si le registre n'existe pas encore
       edtShortcutAutocomplete.Text := 'Ctrl+Alt+Space';
       edtShortcutRefactor.Text := 'Ctrl+Alt+R';
       cbCloudType.ItemIndex := 0;
+      cbQuickProfile.ItemIndex := -1;
       memoPromptAutocomplete.Text := 'Complète ce code Delphi à partir de la position du curseur. Retourne UNIQUEMENT le code complété, sans aucun texte explicatif ni markdown.';
       memoPromptRefactor.Text := 'Tu es un expert Delphi senior. Refactore le code suivant pour l''optimiser, le moderniser et le sécuriser. Retourne UNIQUEMENT le code, sans markdown.';
     end;
@@ -147,6 +155,7 @@ begin
       Reg.WriteString('Endpoint', edtEndpoint.Text);
       Reg.WriteString('Model', cbModel.Text);
       Reg.WriteInteger('CloudType', cbCloudType.ItemIndex);
+      Reg.WriteInteger('QuickProfile', cbQuickProfile.ItemIndex);
       
       Reg.WriteString('ShortcutAutocomplete', edtShortcutAutocomplete.Text);
       Reg.WriteString('ShortcutRefactor', edtShortcutRefactor.Text);
@@ -178,9 +187,6 @@ begin
     cbCloudType.Enabled := False;
     cbCloudType.Color := clBtnFace;
     btnRefreshModels.Enabled := True;
-    
-    if edtEndpoint.Text = '' then
-      edtEndpoint.Text := 'http://127.0.0.1:11434/api/generate';
   end
   else // Cloud
   begin
@@ -189,10 +195,56 @@ begin
     cbCloudType.Enabled := True;
     cbCloudType.Color := clWindow;
     btnRefreshModels.Enabled := False;
-    
-    if edtEndpoint.Text = 'http://127.0.0.1:11434/api/generate' then
-      edtEndpoint.Text := 'https://api.openai.com/v1/chat/completions';
   end;
+end;
+
+procedure TLLMOptionsFrame.cbQuickProfileChange(Sender: TObject);
+begin
+  case cbQuickProfile.ItemIndex of
+    0: // Ollama (Local)
+      begin
+        rgProviderType.ItemIndex := 0;
+        edtEndpoint.Text := 'http://127.0.0.1:11434/api/generate';
+        edtApiKey.Text := '';
+      end;
+    1: // LM Studio (Local)
+      begin
+        rgProviderType.ItemIndex := 0;
+        edtEndpoint.Text := 'http://localhost:1234/v1/chat/completions';
+        edtApiKey.Text := '';
+      end;
+    2: // OpenAI (Cloud)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://api.openai.com/v1/chat/completions';
+        cbCloudType.ItemIndex := 0;
+      end;
+    3: // Google Gemini (Cloud)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        cbCloudType.ItemIndex := 1;
+      end;
+    4: // Anthropic Claude (Cloud)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://api.anthropic.com/v1/messages';
+        cbCloudType.ItemIndex := 2;
+      end;
+    5: // Alibaba Qwen (Cloud)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
+        cbCloudType.ItemIndex := 0;
+      end;
+    6: // DeepSeek (Cloud)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://api.deepseek.com/chat/completions';
+        cbCloudType.ItemIndex := 0;
+      end;
+  end;
+  rgProviderTypeClick(nil);
 end;
 
 procedure TLLMOptionsFrame.btnRefreshModelsClick(Sender: TObject);
