@@ -4,18 +4,22 @@ Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE De
 
 ## ✨ Fonctionnalités Principales
 
-- 🧠 **Multi-Fournisseurs Avancé** : 
-  - **Cloud** : Intégration optimisée pour OpenAI (GPT-4), Google Gemini, Anthropic Claude, QWen, et DeepSeek. Chaque fournisseur utilise son propre formateur JSON natif.
-  - **Local** : Support total de Ollama et LM Studio.
+- 🧠 **Multi-Fournisseurs Avancé & Profils Rapides** :
+  - **Profils préconfigurés** : Sélectionnez en 1 clic vos configurations pour *Ollama (Local)*, *LM Studio (Local)*, *OpenAI*, *Google Gemini*, *Anthropic Claude*, *Alibaba Qwen*, et *DeepSeek*. Les adresses et types d'API se configurent automatiquement !
+  - **Changement instantané** : Plus besoin de retaper les configurations pour passer du local au cloud.
 - 🔄 **Détection Automatique des Modèles Locaux** : Un simple clic sur "Actualiser" dans les paramètres interroge votre serveur Ollama ou LM Studio et remplit la liste déroulante avec les modèles réellement installés sur votre machine !
+- 💾 **Mémoire de Contexte (Conversation History)** : 
+  - L'assistant de chat garde en mémoire le fil de la discussion (jusqu'à 10 messages glissants) pour vous répondre de façon contextuelle.
+  - Vous pouvez réinitialiser la conversation à tout moment grâce au bouton **Nouvelle conversation 🗑️**.
+- 🛠️ **Optimisation Contextuelle à la Demande** :
+  - Une case à cocher **"Optimiser le prompt avec le contexte"** vous permet de décider si vous souhaitez injecter vos règles de codage Delphi et vos fichiers `Agent.md` / `Gemini.md` / `Claude.md`.
+  - Décochez-la pour poser des questions simples hors contexte afin d'**économiser drastiquement vos tokens**.
 - ⚡ **Asynchrone & Non-Bloquant** : Toutes les requêtes sont exécutées dans des threads d'arrière-plan (`TThread`). Votre IDE reste 100% fluide et réactif pendant la génération du code.
 - ⌨️ **Raccourcis Éditeur Natifs** : 
   - `Ctrl+Alt+Space` : **Autocomplétion**. Sélectionnez un extrait de code, l'IA l'analyse et insère la complétion directement.
   - `Ctrl+Alt+R` : **Refactoring**. Sélectionnez une méthode, l'IA l'optimise selon les meilleures pratiques Delphi et la remplace à la volée.
-- 💬 **Assistant de Code (Dockable)** : Une fenêtre ancrable (Chat) dédiée avec formattage (RichEdit) pour poser vos questions d'architecture ou de débogage.
-- 🛠️ **Optimiseur de Prompts Intégré** : L'extension injecte silencieusement des règles strictes de développement Delphi (sécurité mémoire, syntaxe moderne) pour forcer les LLMs à produire un code de haute qualité.
+- 💬 **Assistant de Code Moderne (Dockable)** : Interface ancrable refaite à neuf (Flat UI, polices Segoe UI claires, sans bordures lourdes).
 - 📝 **Journalisation Native (Logger)** : Les événements, appels API et erreurs remontent discrètement dans l'onglet *Messages* natif de RAD Studio.
-- 📂 **Gestion de Contexte Projet** : Génération automatique de fichiers (`Agent.md`, `Gemini.md`, `Claude.md`) à la racine de votre projet pour contextualiser le comportement de l'IA spécifiquement pour chaque projet.
 
 ## 🚀 Installation
 
@@ -30,8 +34,9 @@ Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE De
 Une fois installé, allez dans le menu supérieur de RAD Studio :
 **`Must@Dev` -> `Configuration...`** (ou via `Outils` -> `Options` -> `Tierce Partie`).
 
-- **Fournisseur Local** : Entrez votre endpoint (ex: `http://127.0.0.1:11434/api/generate` pour Ollama) et cliquez sur **Actualiser** pour lister vos modèles locaux.
-- **Fournisseur Cloud** : Choisissez votre moteur préféré (OpenAI/Standard, Gemini, ou Claude), saisissez votre URL et Clé API.
+- **Profil Rapide** : Choisissez votre modèle cible.
+- **Modèle** : Cliquez sur **Actualiser** si vous êtes en local pour lister vos modèles installés.
+- **Clé API** : Saisissez votre clé de sécurité si vous êtes en mode Cloud.
 - **Raccourcis Éditeur** : Personnalisez vos raccourcis clavier si vous le souhaitez.
 - **System Prompts** : Modifiez les instructions système par défaut envoyées à l'IA pour correspondre exactement à votre style de programmation.
 
