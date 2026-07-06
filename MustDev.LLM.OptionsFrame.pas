@@ -1,4 +1,4 @@
-{$CODEPAGE 65001}
+
 unit MustDev.LLM.OptionsFrame;
 
 { ************************************************************************** }
@@ -241,7 +241,7 @@ begin
     1: // LM Studio (Local)
       begin
         rgProviderType.ItemIndex := 0;
-        edtEndpoint.Text := 'http://localhost:1234/v1/chat/completions';
+        edtEndpoint.Text := 'http://127.0.0.1:1234/v1/chat/completions';
         edtApiKey.Text := '';
       end;
     2: // OpenAI (Cloud)

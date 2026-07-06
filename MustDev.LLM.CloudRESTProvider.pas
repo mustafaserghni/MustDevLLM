@@ -1,5 +1,7 @@
 unit MustDev.LLM.CloudRESTProvider;
 
+{$CODEPAGE 65001}
+
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -49,10 +51,36 @@ var
   MessagesArray, PartsArray: TJSONArray;
   MessageObj, PartObj, RespJSON: TJSONObject;
   Msg: TLLMMessage;
+  TargetURL, CleanApiKey: string;
+  KeyPos: Integer;
 begin
   Result := '';
+  TargetURL := FEndpoint;
+  CleanApiKey := FApiKey;
   
-  RestClient := TRESTClient.Create(FEndpoint);
+  // Nettoyage de l'URL si la clé API y est déjà intégrée (ex: copier/coller depuis la doc Gemini)
+  KeyPos := Pos('?key=', TargetURL);
+  if KeyPos = 0 then KeyPos := Pos('&key=', TargetURL);
+  if KeyPos > 0 then
+  begin
+    if CleanApiKey = '' then
+      CleanApiKey := Copy(TargetURL, KeyPos + 5, Length(TargetURL));
+    TargetURL := Copy(TargetURL, 1, KeyPos - 1);
+  end;
+
+  // Remplacement dynamique du modèle dans l'URL pour Google Gemini
+  if (FCloudType = 1) and (FModel <> '') and (Pos('/models/', TargetURL) > 0) then
+  begin
+    var StartPos := Pos('/models/', TargetURL) + 8;
+    var EndPos := Pos(':generateContent', TargetURL);
+    if EndPos > StartPos then
+    begin
+      var OldModel := Copy(TargetURL, StartPos, EndPos - StartPos);
+      TargetURL := StringReplace(TargetURL, '/models/' + OldModel, '/models/' + FModel, [rfIgnoreCase]);
+    end;
+  end;
+
+  RestClient := TRESTClient.Create(TargetURL);
   RestRequest := TRESTRequest.Create(nil);
   RestResponse := TRESTResponse.Create(nil);
   JSONPayload := TJSONObject.Create;
@@ -61,6 +89,7 @@ begin
     RestRequest.Response := RestResponse;
     RestRequest.Method := rmPOST;
     
+    // Configuration des paramètres selon le fournisseur d'IA
     if FCloudType = 1 then // Gemini (Google)
     begin
       MessagesArray := TJSONArray.Create;
@@ -97,15 +126,14 @@ begin
       
       JSONPayload.AddPair('contents', MessagesArray);
       
-      // API Key
-      if (FApiKey <> '') and (Pos('key=', FEndpoint) = 0) then
+      // L'API Key de Gemini doit être passée en paramètre pkQUERY pour éviter les erreurs de format d'URL
+      if CleanApiKey <> '' then
       begin
-        if Pos('?', FEndpoint) > 0 then
-          RestClient.BaseURL := FEndpoint + '&key=' + FApiKey
-        else
-          RestClient.BaseURL := FEndpoint + '?key=' + FApiKey;
+        var Param := RestRequest.Params.AddItem;
+        Param.Name := 'key';
+        Param.Value := CleanApiKey;
+        Param.Kind := pkQUERY;
       end;
-      RestRequest.Params.AddHeader('x-goog-api-key', FApiKey);
     end
     else if FCloudType = 2 then // Claude (Anthropic)
     begin
@@ -114,7 +142,6 @@ begin
       
       MessagesArray := TJSONArray.Create;
       
-      // Injection de l'historique
       if AKeepHistory then
       begin
         for Msg in FHistory do
@@ -126,7 +153,6 @@ begin
         end;
       end;
       
-      // Message courant
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
@@ -134,17 +160,28 @@ begin
       
       JSONPayload.AddPair('messages', MessagesArray);
       
-      if FApiKey <> '' then
-        RestRequest.Params.AddHeader('x-api-key', FApiKey);
-      RestRequest.Params.AddHeader('anthropic-version', '2023-06-01');
+      // Headers Claude sécurisés avec TRESTRequestParameter
+      if CleanApiKey <> '' then
+      begin
+        var ParamKey := RestRequest.Params.AddItem;
+        ParamKey.Name := 'x-api-key';
+        ParamKey.Value := CleanApiKey;
+        ParamKey.Kind := pkHTTPHEADER;
+        ParamKey.Options := [poDoNotEncode];
+      end;
+      
+      var ParamVer := RestRequest.Params.AddItem;
+      ParamVer.Name := 'anthropic-version';
+      ParamVer.Value := '2023-06-01';
+      ParamVer.Kind := pkHTTPHEADER;
+      ParamVer.Options := [poDoNotEncode];
     end
-    else // 0 = OpenAI / DeepSeek / QWen / Standard
+    else // 0 = OpenAI / DeepSeek / Qwen / Standard
     begin
       JSONPayload.AddPair('model', FModel);
       
       MessagesArray := TJSONArray.Create;
       
-      // Injection de l'historique
       if AKeepHistory then
       begin
         for Msg in FHistory do
@@ -156,7 +193,6 @@ begin
         end;
       end;
       
-      // Message courant
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
@@ -164,8 +200,15 @@ begin
       
       JSONPayload.AddPair('messages', MessagesArray);
       
-      if FApiKey <> '' then
-        RestRequest.Params.AddHeader('Authorization', 'Bearer ' + FApiKey);
+      // Header standard Authorization Bearer sécurisé
+      if CleanApiKey <> '' then
+      begin
+        var ParamAuth := RestRequest.Params.AddItem;
+        ParamAuth.Name := 'Authorization';
+        ParamAuth.Value := 'Bearer ' + CleanApiKey;
+        ParamAuth.Kind := pkHTTPHEADER;
+        ParamAuth.Options := [poDoNotEncode];
+      end;
     end;
 
     RestRequest.AddBody(JSONPayload.ToString, ctAPPLICATION_JSON);
@@ -215,7 +258,6 @@ begin
           end;
         end;
         
-        // Enregistrement dans l'historique si demandé
         if AKeepHistory and (Result <> '') then
         begin
           AddToHistory('user', APrompt);

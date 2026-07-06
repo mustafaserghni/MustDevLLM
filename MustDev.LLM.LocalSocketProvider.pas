@@ -1,5 +1,7 @@
 unit MustDev.LLM.LocalSocketProvider;
 
+{$CODEPAGE 65001}
+
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -53,13 +55,14 @@ begin
   try
     JSONPayload.AddPair('model', FModel);
     
-    TargetURL := FEndpoint;
+    // Remplacement automatique de localhost par 127.0.0.1 pour contourner les problèmes de résolution IPv6 Windows
+    TargetURL := StringReplace(FEndpoint, 'localhost', '127.0.0.1', [rfIgnoreCase]);
     IsOllamaChat := False;
     
     // Redirection automatique vers /api/chat pour Ollama si l'historique est demandé
-    if AKeepHistory and (Pos('/api/generate', FEndpoint) > 0) then
+    if AKeepHistory and (Pos('/api/generate', TargetURL) > 0) then
     begin
-      TargetURL := StringReplace(FEndpoint, '/api/generate', '/api/chat', [rfIgnoreCase]);
+      TargetURL := StringReplace(TargetURL, '/api/generate', '/api/chat', [rfIgnoreCase]);
       IsOllamaChat := True;
     end;
     
@@ -108,8 +111,6 @@ begin
         try
           if IsOllamaChat or (Pos('/v1/', TargetURL) > 0) then
           begin
-            // Ollama /api/chat renvoie un format { message: { role: ..., content: ... } }
-            // LM Studio /v1/chat/completions renvoie { choices: [ { message: { content: ... } } ] }
             if IsOllamaChat then
             begin
               var MsgNode := RespJSON.GetValue<TJSONObject>('message');
@@ -131,7 +132,6 @@ begin
           else
             Result := RespJSON.GetValue<string>('response');
             
-          // Enregistrer dans l'historique si demandé
           if AKeepHistory and (Result <> '') then
           begin
             AddToHistory('user', APrompt);
@@ -165,15 +165,16 @@ begin
   Http := THTTPClient.Create;
   try
     try
-      if Pos('11434', AEndpoint) > 0 then
+      // Résolution du localhost Windows (IPv6 ::1) en 127.0.0.1 pour contacter LM Studio / Ollama à coup sûr
+      BaseURL := StringReplace(AEndpoint, 'localhost', '127.0.0.1', [rfIgnoreCase]);
+      
+      if Pos('11434', BaseURL) > 0 then
       begin
-        BaseURL := AEndpoint;
         BaseURL := StringReplace(BaseURL, '/generate', '/tags', [rfIgnoreCase]);
         BaseURL := StringReplace(BaseURL, '/chat', '/tags', [rfIgnoreCase]);
       end
-      else if Pos('/v1/', AEndpoint) > 0 then
+      else if Pos('/v1/', BaseURL) > 0 then
       begin
-        BaseURL := AEndpoint;
         BaseURL := StringReplace(BaseURL, '/chat/completions', '/models', [rfIgnoreCase]);
       end
       else
@@ -185,7 +186,7 @@ begin
         JSONObj := TJSONObject.ParseJSONValue(Resp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
         if Assigned(JSONObj) then
         try
-          if Pos('11434', AEndpoint) > 0 then
+          if Pos('11434', BaseURL) > 0 then
             ModelsArray := JSONObj.GetValue<TJSONArray>('models')
           else
             ModelsArray := JSONObj.GetValue<TJSONArray>('data');
@@ -196,7 +197,7 @@ begin
             for I := 0 to ModelsArray.Count - 1 do
             begin
               var ModelObj := ModelsArray.Items[I] as TJSONObject;
-              if Pos('11434', AEndpoint) > 0 then
+              if Pos('11434', BaseURL) > 0 then
                 Result[I] := ModelObj.GetValue<string>('name')
               else
                 Result[I] := ModelObj.GetValue<string>('id');

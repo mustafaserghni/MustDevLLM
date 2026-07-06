@@ -52,33 +52,32 @@ object LLMOptionsFrame: TLLMOptionsFrame
         Width = 440
         Height = 225
         BevelOuter = bvNone
-        ParentBackground = True
         TabOrder = 1
         object lblQuickProfile: TLabel
           Left = 10
           Top = 13
-          Width = 72
+          Width = 73
           Height = 15
           Caption = 'Profil Rapide :'
         end
         object lblEndpoint: TLabel
           Left = 10
           Top = 53
-          Width = 59
+          Width = 70
           Height = 15
-          Caption = 'URL de l''API :'
+          Caption = 'URL de l'#39'API :'
         end
         object lblApiKey: TLabel
           Left = 10
           Top = 93
-          Width = 45
+          Width = 44
           Height = 15
           Caption = 'Cle API :'
         end
         object lblCloudType: TLabel
           Left = 10
           Top = 133
-          Width = 57
+          Width = 59
           Height = 15
           Caption = 'API Cloud :'
         end
@@ -157,9 +156,9 @@ object LLMOptionsFrame: TLLMOptionsFrame
       object lblTitleShortcuts: TLabel
         Left = 16
         Top = 12
-        Width = 170
+        Width = 160
         Height = 17
-        Caption = 'Raccourcis clavier de l''IDE'
+        Caption = 'Raccourcis clavier de l'#39'IDE'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clHighlight
         Font.Height = -13
@@ -173,12 +172,11 @@ object LLMOptionsFrame: TLLMOptionsFrame
         Width = 440
         Height = 150
         BevelOuter = bvNone
-        ParentBackground = True
         TabOrder = 0
         object lblShortcutAutocomplete: TLabel
           Left = 10
           Top = 23
-          Width = 98
+          Width = 93
           Height = 15
           Caption = 'Autocompletion :'
         end
@@ -211,9 +209,9 @@ object LLMOptionsFrame: TLLMOptionsFrame
       object lblTitlePrompts: TLabel
         Left = 16
         Top = 12
-        Width = 180
+        Width = 194
         Height = 17
-        Caption = 'Prompts Systeme de l''Assistant'
+        Caption = 'Prompts Systeme de l'#39'Assistant'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clHighlight
         Font.Height = -13
@@ -227,12 +225,11 @@ object LLMOptionsFrame: TLLMOptionsFrame
         Width = 440
         Height = 285
         BevelOuter = bvNone
-        ParentBackground = True
         TabOrder = 0
         object lblPromptAutocomplete: TLabel
           Left = 10
           Top = 10
-          Width = 98
+          Width = 93
           Height = 15
           Caption = 'Autocompletion :'
         end
