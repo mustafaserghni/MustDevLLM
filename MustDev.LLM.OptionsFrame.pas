@@ -231,48 +231,76 @@ end;
 
 procedure TLLMOptionsFrame.cbQuickProfileChange(Sender: TObject);
 begin
+  cbModel.Items.Clear;
   case cbQuickProfile.ItemIndex of
     0: // Ollama (Local)
       begin
         rgProviderType.ItemIndex := 0;
         edtEndpoint.Text := 'http://127.0.0.1:11434/api/generate';
         edtApiKey.Text := '';
+        cbModel.Items.Add('qwen2.5-coder');
+        cbModel.Items.Add('llama3');
+        cbModel.Items.Add('codellama');
+        cbModel.ItemIndex := 0;
       end;
     1: // LM Studio (Local)
       begin
         rgProviderType.ItemIndex := 0;
         edtEndpoint.Text := 'http://127.0.0.1:1234/v1/chat/completions';
         edtApiKey.Text := '';
+        cbModel.Text := ''; // Rempli lors du clic sur Actualiser
       end;
     2: // OpenAI (Cloud)
       begin
         rgProviderType.ItemIndex := 1;
         edtEndpoint.Text := 'https://api.openai.com/v1/chat/completions';
         cbCloudType.ItemIndex := 0;
+        cbModel.Items.Add('gpt-4o');
+        cbModel.Items.Add('gpt-4o-mini');
+        cbModel.Items.Add('gpt-4-turbo');
+        cbModel.Items.Add('o1-mini');
+        cbModel.ItemIndex := 0;
       end;
     3: // Google Gemini (Cloud)
       begin
         rgProviderType.ItemIndex := 1;
-        edtEndpoint.Text := 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+        edtEndpoint.Text := 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
         cbCloudType.ItemIndex := 1;
+        cbModel.Items.Add('gemini-2.5-flash');
+        cbModel.Items.Add('gemini-2.5-pro');
+        cbModel.Items.Add('gemini-1.5-flash');
+        cbModel.Items.Add('gemini-1.5-pro');
+        cbModel.ItemIndex := 0;
       end;
     4: // Anthropic Claude (Cloud)
       begin
         rgProviderType.ItemIndex := 1;
         edtEndpoint.Text := 'https://api.anthropic.com/v1/messages';
         cbCloudType.ItemIndex := 2;
+        cbModel.Items.Add('claude-3-5-sonnet-latest');
+        cbModel.Items.Add('claude-3-5-haiku-latest');
+        cbModel.Items.Add('claude-3-opus-latest');
+        cbModel.ItemIndex := 0;
       end;
     5: // Alibaba Qwen (Cloud)
       begin
         rgProviderType.ItemIndex := 1;
         edtEndpoint.Text := 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
         cbCloudType.ItemIndex := 0;
+        cbModel.Items.Add('qwen-coder-turbo');
+        cbModel.Items.Add('qwen-max');
+        cbModel.Items.Add('qwen-plus');
+        cbModel.Items.Add('qwen-turbo');
+        cbModel.ItemIndex := 0;
       end;
     6: // DeepSeek (Cloud)
       begin
         rgProviderType.ItemIndex := 1;
         edtEndpoint.Text := 'https://api.deepseek.com/chat/completions';
         cbCloudType.ItemIndex := 0;
+        cbModel.Items.Add('deepseek-chat');
+        cbModel.Items.Add('deepseek-coder');
+        cbModel.ItemIndex := 0;
       end;
   end;
   rgProviderTypeClick(nil);
