@@ -56,7 +56,7 @@ implementation
 {$R *.dfm}
 
 uses
-  System.Win.Registry, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
+  System.Win.Registry, Winapi.ShellAPI, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
   MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer;
 
 { TDockableLLMForm }
@@ -76,19 +76,22 @@ var
 begin
   Caption := 'Must@Dev - AI Assistant';
   
-  // Création dynamique du TWebBrowser pour éviter les erreurs d'ActiveX blobs dans le DFM
+  // Création dynamique du TWebBrowser
   FWebChat := TWebBrowser.Create(Self);
-  FWebChat.Parent := Self;
+  // Cast TWinControl pour contourner le bug de la propriété Parent en lecture seule sur certaines versions de TOleControl
+  TWinControl(FWebChat).Parent := Self;
   FWebChat.Align := alClient;
   FWebChat.Visible := False;
   
-  // Configuration du moteur Edge Chromium (WebView2)
+  // Configuration conditionnelle du moteur Edge Chromium (WebView2) introduit dans Delphi 10.4 (CompilerVersion 34.0)
+  {$IF CompilerVersion >= 34.0}
   try
     FWebChat.WindowsEngine := TWindowsEngine.EdgeOnly;
   except
     on E: Exception do
       TLLMLogger.LogError('Impossible d''initialiser le moteur Edge Chromium (WebView2)', E);
   end;
+  {$IFEND}
 
   // Actions de la barre d'outils
   btnSettings.Caption := ' ⚙️ Paramètres ';
@@ -131,6 +134,7 @@ end;
 procedure TDockableLLMForm.cbChatModeChange(Sender: TObject);
 var
   Reg: TRegistry;
+  TargetURL: string;
 begin
   // Sauvegarde du mode sélectionné
   Reg := TRegistry.Create;
@@ -161,21 +165,37 @@ begin
   end
   else
   begin
-    // Mode Web : Cacher le chat natif et afficher le WebBrowser Edge
+    // Mode Web : Cacher le chat natif et afficher/naviguer
     richChat.Visible := False;
     Splitter1.Visible := False;
     pnlBottom.Visible := False;
     pnlTop.Visible := False;
     btnClearHistory.Enabled := False;
     
-    FWebChat.Visible := True;
-    
-    // Navigation vers la page officielle
+    // Détermination de l'URL cible
     case cbChatMode.ItemIndex of
-      1: FWebChat.Navigate('https://chatgpt.com');
-      2: FWebChat.Navigate('https://gemini.google.com');
-      3: FWebChat.Navigate('https://claude.ai');
+      1: TargetURL := 'https://chatgpt.com';
+      2: TargetURL := 'https://gemini.google.com';
+      3: TargetURL := 'https://claude.ai';
+    else
+      TargetURL := '';
     end;
+
+    // Sur les versions de Delphi antérieures à 10.4 (sans WebView2), on ouvre le navigateur système
+    // pour éviter d'utiliser Internet Explorer obsolète qui bloquera les connexions
+    {$IF CompilerVersion < 34.0}
+    if TargetURL <> '' then
+    begin
+      cbChatMode.ItemIndex := 0; // Repasse en mode API dans l'IHM
+      cbChatModeChange(nil);
+      ShellExecute(0, 'open', PChar(TargetURL), nil, nil, SW_SHOWNORMAL);
+      TLLMLogger.LogInfo('Ouverture du navigateur externe pour : ' + TargetURL);
+    end;
+    {$ELSE}
+    FWebChat.Visible := True;
+    if TargetURL <> '' then
+      FWebChat.Navigate(TargetURL);
+    {$IFEND}
   end;
 end;
 
@@ -299,23 +319,24 @@ begin
           
         ResponseText := FProvider.Ask(FinalPrompt, True);
         
-        System.Classes.TThread.Queue(
+        // Cast explicite TThreadProcedure pour lever toute ambiguïté de surcharge de Queue
+        System.Classes.TThread.Queue(nil, TThreadProcedure(
           procedure
           begin
             AddChatMsg('Must@Dev AI', ResponseText, False);
             SetUIBusy(False);
             TLLMLogger.LogSuccess('Réponse du Chat reçue.');
-          end);
+          end));
       except
         on E: Exception do
         begin
-          System.Classes.TThread.Queue(
+          System.Classes.TThread.Queue(nil, TThreadProcedure(
             procedure
             begin
               AddChatMsg('Erreur', E.Message, False);
               SetUIBusy(False);
               TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', E);
-            end);
+            end));
         end;
       end;
     end).Start;
