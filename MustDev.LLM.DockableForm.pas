@@ -1,5 +1,6 @@
-﻿
 unit MustDev.LLM.DockableForm;
+
+{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
 
 { ************************************************************************** }
 {                                                                            }
@@ -14,7 +15,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, 
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
-  Vcl.ComCtrls, Vcl.ToolWin,
+  Vcl.ComCtrls, Vcl.ToolWin, SHDocVw, // SHDocVw pour TWebBrowser
   ToolsAPI, DockForm, MustDev.LLM.Interfaces, MustDev.LLM.Factory;
 
 type
@@ -22,6 +23,8 @@ type
     ToolBar1: TToolBar;
     btnSettings: TToolButton;
     btnClearHistory: TToolButton;
+    btnSeparator: TToolButton;
+    cbChatMode: TComboBox;
     lblSource: TLabel;
     pnlTop: TPanel;
     richChat: TRichEdit;
@@ -34,8 +37,10 @@ type
     procedure FormCreate(Sender: TObject);
     procedure btnSettingsClick(Sender: TObject);
     procedure btnClearHistoryClick(Sender: TObject);
+    procedure cbChatModeChange(Sender: TObject);
   private
     FProvider: ILLMProvider;
+    FWebChat: TWebBrowser; // Navigateur créé dynamiquement à l'exécution
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
@@ -65,10 +70,27 @@ begin
 end;
 
 procedure TDockableLLMForm.FormCreate(Sender: TObject);
+var
+  Reg: TRegistry;
+  LMode: Integer;
 begin
   Caption := 'Must@Dev - AI Assistant';
   
-  // Raccourcis / Actions de la barre d'outils avec caractères accentués standards
+  // Création dynamique du TWebBrowser pour éviter les erreurs d'ActiveX blobs dans le DFM
+  FWebChat := TWebBrowser.Create(Self);
+  FWebChat.Parent := Self;
+  FWebChat.Align := alClient;
+  FWebChat.Visible := False;
+  
+  // Configuration du moteur Edge Chromium (WebView2)
+  try
+    FWebChat.SelectedEngine := TSelectedEngine.EdgeOnly;
+  except
+    on E: Exception do
+      TLLMLogger.LogError('Impossible d''initialiser le moteur Edge Chromium (WebView2)', E);
+  end;
+
+  // Actions de la barre d'outils
   btnSettings.Caption := ' ⚙️ Paramètres ';
   btnClearHistory.Caption := ' 🗑️ Nouvelle conversation ';
   
@@ -79,6 +101,82 @@ begin
   richChat.Clear;
   richChat.Font.Name := 'Segoe UI';
   richChat.Font.Size := 10;
+
+  // Remplissage du ComboBox du mode Chat
+  cbChatMode.Items.Clear;
+  cbChatMode.Items.Add('Mode API (Clé de sécurité)');
+  cbChatMode.Items.Add('ChatGPT (Compte)');
+  cbChatMode.Items.Add('Google Gemini (Compte)');
+  cbChatMode.Items.Add('Anthropic Claude (Compte)');
+  
+  // Chargement du dernier mode sauvegardé
+  LMode := 0;
+  Reg := TRegistry.Create;
+  try
+    Reg.RootKey := HKEY_CURRENT_USER;
+    if Reg.OpenKeyReadOnly('\Software\MustDev\LLMIntegration\Settings') then
+    begin
+      if Reg.ValueExists('ChatMode') then
+        LMode := Reg.ReadInteger('ChatMode');
+      Reg.CloseKey;
+    end;
+  finally
+    Reg.Free;
+  end;
+  
+  cbChatMode.ItemIndex := LMode;
+  cbChatModeChange(nil);
+end;
+
+procedure TDockableLLMForm.cbChatModeChange(Sender: TObject);
+var
+  Reg: TRegistry;
+begin
+  // Sauvegarde du mode sélectionné
+  Reg := TRegistry.Create;
+  try
+    Reg.RootKey := HKEY_CURRENT_USER;
+    if Reg.OpenKey('\Software\MustDev\LLMIntegration\Settings', True) then
+    begin
+      Reg.WriteInteger('ChatMode', cbChatMode.ItemIndex);
+      Reg.CloseKey;
+    end;
+  finally
+    Reg.Free;
+  end;
+
+  // Basculement de l'UI
+  if cbChatMode.ItemIndex = 0 then
+  begin
+    // Mode API : Afficher le chat natif
+    FWebChat.Visible := False;
+    
+    richChat.Visible := True;
+    Splitter1.Visible := True;
+    pnlBottom.Visible := True;
+    pnlTop.Visible := True;
+    btnClearHistory.Enabled := True;
+    
+    InitProvider;
+  end
+  else
+  begin
+    // Mode Web : Cacher le chat natif et afficher le WebBrowser Edge
+    richChat.Visible := False;
+    Splitter1.Visible := False;
+    pnlBottom.Visible := False;
+    pnlTop.Visible := False;
+    btnClearHistory.Enabled := False;
+    
+    FWebChat.Visible := True;
+    
+    // Navigation vers la page officielle
+    case cbChatMode.ItemIndex of
+      1: FWebChat.Navigate('https://chatgpt.com');
+      2: FWebChat.Navigate('https://gemini.google.com');
+      3: FWebChat.Navigate('https://claude.ai');
+    end;
+  end;
 end;
 
 procedure TDockableLLMForm.InitProvider;
@@ -150,6 +248,7 @@ begin
   btnAsk.Enabled := not IsBusy;
   memoPrompt.Enabled := not IsBusy;
   btnClearHistory.Enabled := not IsBusy;
+  cbChatMode.Enabled := not IsBusy;
   if IsBusy then
   begin
     btnAsk.Caption := 'Patience...';
@@ -200,7 +299,6 @@ begin
           
         ResponseText := FProvider.Ask(FinalPrompt, True);
         
-        // Qualification complète System.Classes.TThread.Queue pour éviter l'erreur de surcharge VCL
         System.Classes.TThread.Queue(nil,
           procedure
           begin

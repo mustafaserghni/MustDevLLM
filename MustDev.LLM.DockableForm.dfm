@@ -12,27 +12,17 @@ object DockableLLMForm: TDockableLLMForm
   Font.Style = []
   OnCreate = FormCreate
   TextHeight = 15
-  object Splitter1: TSplitter
-    Left = 0
-    Top = 310
-    Width = 400
-    Height = 5
-    Cursor = crVSplit
-    Align = alBottom
-    Beveled = True
-  end
   object ToolBar1: TToolBar
     Left = 0
     Top = 0
     Width = 400
     Height = 29
-    ButtonHeight = 21
-    ButtonWidth = 136
     Caption = 'ToolBar1'
+    Flat = True
+    Images = nil
     List = True
     ShowCaptions = True
     TabOrder = 0
-    ExplicitWidth = 394
     object btnSettings: TToolButton
       Left = 0
       Top = 0
@@ -40,10 +30,27 @@ object DockableLLMForm: TDockableLLMForm
       OnClick = btnSettingsClick
     end
     object btnClearHistory: TToolButton
-      Left = 136
+      Left = 88
       Top = 0
       Caption = ' Nouvelle conversation '
       OnClick = btnClearHistoryClick
+    end
+    object btnSeparator: TToolButton
+      Left = 210
+      Top = 0
+      Width = 8
+      Caption = ''
+      ImageIndex = 2
+      Style = tbsSeparator
+    end
+    object cbChatMode: TComboBox
+      Left = 218
+      Top = 0
+      Width = 160
+      Height = 22
+      Style = csDropDownList
+      TabOrder = 0
+      OnChange = cbChatModeChange
     end
   end
   object pnlTop: TPanel
@@ -54,11 +61,10 @@ object DockableLLMForm: TDockableLLMForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 394
     object lblSource: TLabel
       Left = 8
       Top = 8
-      Width = 119
+      Width = 111
       Height = 15
       Caption = 'Source : Non initialise'
       Font.Charset = DEFAULT_CHARSET
@@ -84,8 +90,16 @@ object DockableLLMForm: TDockableLLMForm
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 2
-    ExplicitWidth = 394
-    ExplicitHeight = 242
+    Zoom = 100
+  end
+  object Splitter1: TSplitter
+    Left = 0
+    Top = 310
+    Width = 400
+    Height = 5
+    Cursor = crVSplit
+    Align = alBottom
+    Beveled = True
   end
   object pnlBottom: TPanel
     Left = 0
@@ -95,8 +109,6 @@ object DockableLLMForm: TDockableLLMForm
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitTop = 306
-    ExplicitWidth = 394
     object pnlInputActions: TPanel
       Left = 0
       Top = 115
@@ -104,8 +116,8 @@ object DockableLLMForm: TDockableLLMForm
       Height = 30
       Align = alBottom
       BevelOuter = bvNone
+      ParentBackground = True
       TabOrder = 0
-      ExplicitWidth = 394
       object chkOptimizeContext: TCheckBox
         Left = 8
         Top = 6
@@ -125,7 +137,6 @@ object DockableLLMForm: TDockableLLMForm
       Align = alClient
       ScrollBars = ssVertical
       TabOrder = 1
-      ExplicitWidth = 314
     end
     object btnAsk: TButton
       Left = 320
@@ -142,7 +153,6 @@ object DockableLLMForm: TDockableLLMForm
       ParentFont = False
       TabOrder = 2
       OnClick = btnAskClick
-      ExplicitLeft = 314
     end
   end
 end
