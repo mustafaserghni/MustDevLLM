@@ -2,27 +2,40 @@ object DockableLLMForm: TDockableLLMForm
   Left = 0
   Top = 0
   Caption = 'Must@Dev - AI Assistant'
-  ClientHeight = 460
-  ClientWidth = 400
+  ClientHeight = 833
+  ClientWidth = 826
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  Position = poMainFormCenter
   OnCreate = FormCreate
   TextHeight = 15
+  object Splitter1: TSplitter
+    Left = 0
+    Top = 683
+    Width = 826
+    Height = 5
+    Cursor = crVSplit
+    Align = alBottom
+    Beveled = True
+    ExplicitTop = 310
+    ExplicitWidth = 400
+  end
   object ToolBar1: TToolBar
     Left = 0
     Top = 0
-    Width = 400
+    Width = 826
     Height = 29
+    ButtonHeight = 21
+    ButtonWidth = 136
     Caption = 'ToolBar1'
-    Flat = True
-    Images = nil
     List = True
     ShowCaptions = True
     TabOrder = 0
+    ExplicitWidth = 394
     object btnSettings: TToolButton
       Left = 0
       Top = 0
@@ -30,24 +43,23 @@ object DockableLLMForm: TDockableLLMForm
       OnClick = btnSettingsClick
     end
     object btnClearHistory: TToolButton
-      Left = 88
+      Left = 136
       Top = 0
       Caption = ' Nouvelle conversation '
       OnClick = btnClearHistoryClick
     end
     object btnSeparator: TToolButton
-      Left = 210
+      Left = 272
       Top = 0
       Width = 8
-      Caption = ''
       ImageIndex = 2
       Style = tbsSeparator
     end
     object cbChatMode: TComboBox
-      Left = 218
+      Left = 280
       Top = 0
       Width = 160
-      Height = 22
+      Height = 23
       Style = csDropDownList
       TabOrder = 0
       OnChange = cbChatModeChange
@@ -56,15 +68,16 @@ object DockableLLMForm: TDockableLLMForm
   object pnlTop: TPanel
     Left = 0
     Top = 29
-    Width = 400
+    Width = 826
     Height = 30
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 394
     object lblSource: TLabel
       Left = 8
       Top = 8
-      Width = 111
+      Width = 119
       Height = 15
       Caption = 'Source : Non initialise'
       Font.Charset = DEFAULT_CHARSET
@@ -78,8 +91,8 @@ object DockableLLMForm: TDockableLLMForm
   object richChat: TRichEdit
     Left = 0
     Top = 59
-    Width = 400
-    Height = 251
+    Width = 826
+    Height = 624
     Align = alClient
     Font.Charset = ANSI_CHARSET
     Font.Color = clWindowText
@@ -90,34 +103,28 @@ object DockableLLMForm: TDockableLLMForm
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 2
-    Zoom = 100
-  end
-  object Splitter1: TSplitter
-    Left = 0
-    Top = 310
-    Width = 400
-    Height = 5
-    Cursor = crVSplit
-    Align = alBottom
-    Beveled = True
+    ExplicitWidth = 394
+    ExplicitHeight = 242
   end
   object pnlBottom: TPanel
     Left = 0
-    Top = 315
-    Width = 400
+    Top = 688
+    Width = 826
     Height = 145
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 3
+    ExplicitTop = 306
+    ExplicitWidth = 394
     object pnlInputActions: TPanel
       Left = 0
       Top = 115
-      Width = 400
+      Width = 826
       Height = 30
       Align = alBottom
       BevelOuter = bvNone
-      ParentBackground = True
       TabOrder = 0
+      ExplicitWidth = 394
       object chkOptimizeContext: TCheckBox
         Left = 8
         Top = 6
@@ -132,14 +139,15 @@ object DockableLLMForm: TDockableLLMForm
     object memoPrompt: TMemo
       Left = 0
       Top = 0
-      Width = 320
+      Width = 746
       Height = 115
       Align = alClient
       ScrollBars = ssVertical
       TabOrder = 1
+      ExplicitWidth = 314
     end
     object btnAsk: TButton
-      Left = 320
+      Left = 746
       Top = 0
       Width = 80
       Height = 115
@@ -153,6 +161,7 @@ object DockableLLMForm: TDockableLLMForm
       ParentFont = False
       TabOrder = 2
       OnClick = btnAskClick
+      ExplicitLeft = 314
     end
   end
 end

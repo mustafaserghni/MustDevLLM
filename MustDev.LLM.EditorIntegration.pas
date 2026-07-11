@@ -185,19 +185,19 @@ begin
                 end;
               except
                 on E: Exception do
-                  TLLMLogger.LogError('Erreur lors de l''insertion dans l''éditeur', E);
+                  TLLMLogger.LogError('Erreur lors de l''insertion dans l''éditeur', E.Message);
               end;
             end);
             
         except
           on E: Exception do
-            TLLMLogger.LogError('Erreur lors de l''appel LLM', E);
+            TLLMLogger.LogError('Erreur lors de l''appel LLM', E.Message);
         end;
       end).Start;
       
   except
     on E: Exception do
-      TLLMLogger.LogError('Erreur de préparation LLM', E);
+      TLLMLogger.LogError('Erreur de préparation LLM', E.Message);
   end;
 end;
 

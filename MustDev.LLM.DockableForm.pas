@@ -382,12 +382,13 @@ begin
       except
         on E: Exception do
         begin
+          var ErrMsg := E.Message;
           System.Classes.TThread.Queue(nil, TThreadProcedure(
             procedure
             begin
-              AddChatMsg('Erreur', E.Message, False);
+              AddChatMsg('Erreur', ErrMsg, False);
               SetUIBusy(False);
-              TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', E);
+              TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', ErrMsg);
             end));
         end;
       end;

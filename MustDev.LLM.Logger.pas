@@ -20,7 +20,7 @@ type
     class procedure EnsureGroupExists;
   public
     class procedure LogInfo(const AMessage: string);
-    class procedure LogError(const AMessage: string; const ExceptionObj: Exception = nil);
+    class procedure LogError(const AMessage: string; const AExceptionMessage: string = '');
     class procedure LogSuccess(const AMessage: string);
   end;
 
@@ -46,12 +46,11 @@ begin
   EnsureGroupExists;
   if Supports(BorlandIDEServices, IOTAMessageServices, MsgServices) then
   begin
-    // Le thread principal (VCL) est requis pour interagir avec l'IDE de manière asynchrone
-    TThread.Queue(nil,
+    TThread.Queue(nil, TThreadProcedure(
       procedure
       begin
         MsgServices.AddTitleMessage('[' + TimeToStr(Now) + '] INFO : ' + AMessage, FMessageGroup);
-      end);
+      end));
   end;
 end;
 
@@ -62,31 +61,31 @@ begin
   EnsureGroupExists;
   if Supports(BorlandIDEServices, IOTAMessageServices, MsgServices) then
   begin
-    TThread.Queue(nil,
+    TThread.Queue(nil, TThreadProcedure(
       procedure
       begin
         MsgServices.AddTitleMessage('[' + TimeToStr(Now) + '] SUCCÈS : ' + AMessage, FMessageGroup);
-      end);
+      end));
   end;
 end;
 
-class procedure TLLMLogger.LogError(const AMessage: string; const ExceptionObj: Exception);
+class procedure TLLMLogger.LogError(const AMessage: string; const AExceptionMessage: string);
 var
   MsgServices: IOTAMessageServices;
   FullMsg: string;
 begin
   EnsureGroupExists;
   FullMsg := '[' + TimeToStr(Now) + '] ERREUR : ' + AMessage;
-  if Assigned(ExceptionObj) then
-    FullMsg := FullMsg + ' (' + ExceptionObj.Message + ')';
+  if AExceptionMessage <> '' then
+    FullMsg := FullMsg + ' (' + AExceptionMessage + ')';
     
   if Supports(BorlandIDEServices, IOTAMessageServices, MsgServices) then
   begin
-    TThread.Queue(nil,
+    TThread.Queue(nil, TThreadProcedure(
       procedure
       begin
         MsgServices.AddTitleMessage(FullMsg, FMessageGroup);
-      end);
+      end));
   end;
 end;
 
