@@ -1,6 +1,5 @@
-unit MustDev.LLM.LocalSocketProvider;
-
 {$CODEPAGE 65001}
+unit MustDev.LLM.LocalSocketProvider;
 
 { ************************************************************************** }
 {                                                                            }
