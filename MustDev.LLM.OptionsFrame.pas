@@ -63,7 +63,8 @@ implementation
 {$R *.dfm}
 
 uses
-  MustDev.LLM.Security, MustDev.LLM.Interfaces, MustDev.LLM.LocalSocketProvider, System.Win.Registry;
+  MustDev.LLM.Security, MustDev.LLM.Interfaces, MustDev.LLM.LocalSocketProvider, 
+  MustDev.LLM.CloudRESTProvider, System.Win.Registry;
 
 { TLLMOptionsFrame }
 
