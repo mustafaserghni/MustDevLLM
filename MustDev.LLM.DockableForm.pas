@@ -84,7 +84,7 @@ begin
   
   // Configuration du moteur Edge Chromium (WebView2)
   try
-    FWebChat.SelectedEngine := TSelectedEngine.EdgeOnly;
+    FWebChat.WindowsEngine := TWindowsEngine.EdgeOnly;
   except
     on E: Exception do
       TLLMLogger.LogError('Impossible d''initialiser le moteur Edge Chromium (WebView2)', E);
@@ -299,7 +299,7 @@ begin
           
         ResponseText := FProvider.Ask(FinalPrompt, True);
         
-        System.Classes.TThread.Queue(nil,
+        System.Classes.TThread.Queue(
           procedure
           begin
             AddChatMsg('Must@Dev AI', ResponseText, False);
@@ -309,7 +309,7 @@ begin
       except
         on E: Exception do
         begin
-          System.Classes.TThread.Queue(nil,
+          System.Classes.TThread.Queue(
             procedure
             begin
               AddChatMsg('Erreur', E.Message, False);
