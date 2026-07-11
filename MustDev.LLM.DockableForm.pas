@@ -38,7 +38,7 @@ type
     procedure cbChatModeChange(Sender: TObject);
   private
     FProvider: ILLMProvider;
-    FWebChat: TWebBrowser; // Navigateur créé dynamiquement à l'exécution
+    FWebChat: TWebBrowser; // Navigateur créé dynamiquement sur demande (Lazy)
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
@@ -66,6 +66,7 @@ begin
   DeskSection := 'MustDevLLMWindow';
   AutoSave := True;
   SaveStateNecessary := True;
+  FWebChat := nil;
 end;
 
 procedure TDockableLLMForm.TrySetEdgeEngine;
@@ -74,19 +75,20 @@ var
   RttiType: TRttiType;
   Prop: TRttiProperty;
 begin
-  // Utilisation de RTTI dynamique pour éviter toute dépendance de compilation statique 
-  // sur WindowsEngine (qui provoque des erreurs de compilation dcc32 sur certaines versions de Delphi)
+  if not Assigned(FWebChat) then Exit;
+  
   Context := TRttiContext.Create;
   try
     RttiType := Context.GetType(FWebChat.ClassType);
     if Assigned(RttiType) then
     begin
       Prop := RttiType.GetProperty('WindowsEngine');
-      if Assigned(Prop) and Prop.IsWritable then
+      // Sécurité : Vérifier également que PropertyType est bien assigné pour éviter un Access Violation RTTI
+      if Assigned(Prop) and Prop.IsWritable and Assigned(Prop.PropertyType) then
       begin
-        // TWindowsEngine.EdgeOnly a la valeur ordinale 2 (IEOnly=0, EdgeIfAvailable=1, EdgeOnly=2)
+        // TWindowsEngine.EdgeOnly a la valeur ordinale 2
         Prop.SetValue(FWebChat, TValue.FromOrdinal(Prop.PropertyType.Handle, 2));
-        TLLMLogger.LogInfo('Navigateur configuré avec succès sur le moteur Edge Chromium.');
+        TLLMLogger.LogInfo('Moteur Edge Chromium (WebView2) forcé avec succès via RTTI.');
       end;
     end;
   except
@@ -102,15 +104,6 @@ var
 begin
   Caption := 'Must@Dev - AI Assistant';
   
-  // Création dynamique du TWebBrowser
-  FWebChat := TWebBrowser.Create(Self);
-  TWinControl(FWebChat).Parent := Self;
-  FWebChat.Align := alClient;
-  FWebChat.Visible := False;
-  
-  // Configuration dynamique du moteur de rendu Edge Chromium
-  TrySetEdgeEngine;
-
   // Actions de la barre d'outils
   btnSettings.Caption := ' ⚙️ Paramètres ';
   btnClearHistory.Caption := ' 🗑️ Nouvelle conversation ';
@@ -174,7 +167,8 @@ begin
   if cbChatMode.ItemIndex = 0 then
   begin
     // Mode API : Afficher le chat natif
-    FWebChat.Visible := False;
+    if Assigned(FWebChat) then
+      FWebChat.Visible := False;
     
     richChat.Visible := True;
     Splitter1.Visible := True;
@@ -186,7 +180,7 @@ begin
   end
   else
   begin
-    // Mode Web : Cacher le chat natif et afficher/naviguer
+    // Mode Web : Cacher le chat natif
     richChat.Visible := False;
     Splitter1.Visible := False;
     pnlBottom.Visible := False;
@@ -202,36 +196,55 @@ begin
       TargetURL := '';
     end;
 
-    // Détection dynamique si la propriété WindowsEngine existe (Delphi >= 10.4)
-    HasEdgeProp := False;
-    Context := TRttiContext.Create;
-    try
-      RttiType := Context.GetType(FWebChat.ClassType);
-      if Assigned(RttiType) and Assigned(RttiType.GetProperty('WindowsEngine')) then
-        HasEdgeProp := True;
-    except
-      HasEdgeProp := False;
-    end;
-
-    // Si on est sur une ancienne version de Delphi (sans support Edge Chromium), 
-    // on ouvre dans le navigateur externe pour éviter les plantages d'Internet Explorer
-    if not HasEdgeProp then
+    // Initialisation LAZY du TWebBrowser (seulement à la demande et après affichage de la fiche)
+    if not Assigned(FWebChat) then
     begin
-      if TargetURL <> '' then
-      begin
-        cbChatMode.ItemIndex := 0; // Repasse en mode API dans l'IHM
-        cbChatModeChange(nil);
-        ShellExecute(0, 'open', PChar(TargetURL), nil, nil, SW_SHOWNORMAL);
-        TLLMLogger.LogInfo('Ouverture du navigateur externe pour : ' + TargetURL);
+      try
+        FWebChat := TWebBrowser.Create(Self);
+        TWinControl(FWebChat).Parent := Self;
+        FWebChat.Align := alClient;
+        FWebChat.Visible := False;
+        
+        // Configuration dynamique du moteur Edge Chromium
+        TrySetEdgeEngine;
+      except
+        on E: Exception do
+          TLLMLogger.LogError('Erreur d''instanciation du navigateur', E);
       end;
     end;
 
-    // Version moderne : utilisation de WebView2 intégré
-    if HasEdgeProp then
+    if Assigned(FWebChat) then
     begin
-      FWebChat.Visible := True;
-      if TargetURL <> '' then
-        FWebChat.Navigate(TargetURL);
+      // Détection dynamique si la propriété WindowsEngine existe (Delphi >= 10.4)
+      HasEdgeProp := False;
+      Context := TRttiContext.Create;
+      try
+        RttiType := Context.GetType(FWebChat.ClassType);
+        if Assigned(RttiType) and Assigned(RttiType.GetProperty('WindowsEngine')) then
+          HasEdgeProp := True;
+      except
+        HasEdgeProp := False;
+      end;
+
+      // Si on est sur une ancienne version de Delphi (sans support Edge Chromium), 
+      // on ouvre dans le navigateur externe pour éviter les plantages d'Internet Explorer
+      if not HasEdgeProp then
+      begin
+        if TargetURL <> '' then
+        begin
+          cbChatMode.ItemIndex := 0; // Repasse en mode API dans l'IHM
+          cbChatModeChange(nil);
+          ShellExecute(0, 'open', PChar(TargetURL), nil, nil, SW_SHOWNORMAL);
+          TLLMLogger.LogInfo('Ouverture du navigateur externe pour : ' + TargetURL);
+        end;
+      end
+      else
+      begin
+        // Version moderne : utilisation de WebView2 intégré
+        FWebChat.Visible := True;
+        if TargetURL <> '' then
+          FWebChat.Navigate(TargetURL);
+      end;
     end;
   end;
 end;
@@ -322,6 +335,7 @@ procedure TDockableLLMForm.btnAskClick(Sender: TObject);
 var
   UserPrompt: string;
   OptimizeContext: Boolean;
+  LocalProvider: ILLMProvider; // Copie locale pour garantir la thread-safety
 begin
   if Trim(memoPrompt.Text) = '' then Exit;
   
@@ -341,6 +355,7 @@ begin
   
   TLLMLogger.LogInfo('Requête LLM déclenchée depuis le Chat (Asynchrone)...');
   OptimizeContext := chkOptimizeContext.Checked;
+  LocalProvider := FProvider; // Incrémente le compteur de références et protège l'instance dans le thread
   
   // Multithreading : Exécution en arrière-plan
   TThread.CreateAnonymousThread(
@@ -354,7 +369,7 @@ begin
         else
           FinalPrompt := UserPrompt;
           
-        ResponseText := FProvider.Ask(FinalPrompt, True);
+        ResponseText := LocalProvider.Ask(FinalPrompt, True);
         
         // Cast explicite TThreadProcedure pour lever toute ambiguïté de surcharge de Queue
         System.Classes.TThread.Queue(nil, TThreadProcedure(
