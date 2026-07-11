@@ -210,13 +210,13 @@ end;
 
 procedure TLLMOptionsFrame.rgProviderTypeClick(Sender: TObject);
 begin
+  btnRefreshModels.Enabled := True; // Toujours actif, permet de lister les modèles Cloud ET Locaux !
   if rgProviderType.ItemIndex = 0 then // Local
   begin
     edtApiKey.Enabled := False;
     edtApiKey.Color := clBtnFace;
     cbCloudType.Enabled := False;
     cbCloudType.Color := clBtnFace;
-    btnRefreshModels.Enabled := True;
   end
   else // Cloud
   begin
@@ -224,7 +224,6 @@ begin
     edtApiKey.Color := clWindow;
     cbCloudType.Enabled := True;
     cbCloudType.Color := clWindow;
-    btnRefreshModels.Enabled := False;
   end;
 end;
 
@@ -310,11 +309,13 @@ var
   Models: TArray<string>;
   I: Integer;
 begin
-  if rgProviderType.ItemIndex <> 0 then Exit;
-  
   Screen.Cursor := crHourGlass;
   try
-    Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text);
+    if rgProviderType.ItemIndex = 0 then
+      Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text)
+    else
+      Models := TCloudRESTLLMProvider.FetchModels(cbCloudType.ItemIndex, edtEndpoint.Text, edtApiKey.Text);
+      
     if Length(Models) > 0 then
     begin
       cbModel.Items.Clear;
@@ -324,10 +325,10 @@ begin
       if cbModel.Items.Count > 0 then
         cbModel.ItemIndex := 0;
         
-      ShowMessage('Modèles locaux récupérés avec succès.');
+      ShowMessage('Modèles récupérés avec succès.');
     end
     else
-      ShowMessage('Aucun modèle trouvé. Vérifiez que votre serveur local tourne sur l''URL indiquée.');
+      ShowMessage('Aucun modèle trouvé. Vérifiez votre URL, votre clé API et votre connexion réseau.');
   finally
     Screen.Cursor := crDefault;
   end;

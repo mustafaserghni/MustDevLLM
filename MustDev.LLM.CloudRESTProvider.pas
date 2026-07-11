@@ -12,7 +12,7 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.JSON,
-  REST.Types, REST.Client,
+  REST.Types, REST.Client, System.Net.HttpClient,
   MustDev.LLM.Interfaces, MustDev.LLM.BaseProvider;
 
 type
@@ -24,6 +24,9 @@ type
   public
     procedure SetCloudType(ACloudType: Integer);
     function Ask(const APrompt: string; AKeepHistory: Boolean = False): string; override;
+    
+    // Récupération dynamique des modèles pour les services Cloud
+    class function FetchModels(ACloudType: Integer; const AEndpoint, AApiKey: string): TArray<string>;
   end;
 
 implementation
@@ -191,6 +194,7 @@ begin
         end;
       end;
       
+      // Message courant
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
       MessageObj.AddPair('content', APrompt);
@@ -272,6 +276,107 @@ begin
     RestResponse.Free;
     RestRequest.Free;
     RestClient.Free;
+  end;
+end;
+
+class function TCloudRESTLLMProvider.FetchModels(ACloudType: Integer; const AEndpoint, AApiKey: string): TArray<string>;
+var
+  Http: THTTPClient;
+  Resp: IHTTPResponse;
+  BaseURL: string;
+  JSONObj: TJSONObject;
+  ModelsArray: TJSONArray;
+  I: Integer;
+  CleanApiKey: string;
+  KeyPos: Integer;
+begin
+  SetLength(Result, 0);
+  Http := THTTPClient.Create;
+  try
+    try
+      BaseURL := AEndpoint;
+      CleanApiKey := AApiKey;
+      
+      // Extraction de la clé API si elle est codée dans l'URL
+      KeyPos := Pos('?key=', BaseURL);
+      if KeyPos = 0 then KeyPos := Pos('&key=', BaseURL);
+      if KeyPos > 0 then
+      begin
+        if CleanApiKey = '' then
+          CleanApiKey := Copy(BaseURL, KeyPos + 5, Length(BaseURL));
+        BaseURL := Copy(BaseURL, 1, KeyPos - 1);
+      end;
+      
+      if ACloudType = 1 then // Google Gemini
+      begin
+        // Normalisation de l'URL d'extraction des modèles : remplacer models/... par models
+        if Pos('/models/', BaseURL) > 0 then
+          BaseURL := Copy(BaseURL, 1, Pos('/models/', BaseURL) + 7)
+        else if not BaseURL.EndsWith('/') then
+          BaseURL := BaseURL + '/models'
+        else
+          BaseURL := BaseURL + 'models';
+          
+        if CleanApiKey <> '' then
+          BaseURL := BaseURL + '?key=' + CleanApiKey;
+      end
+      else if ACloudType = 2 then // Anthropic Claude (liste fixe car pas d'API publique)
+      begin
+        SetLength(Result, 3);
+        Result[0] := 'claude-3-5-sonnet-latest';
+        Result[1] := 'claude-3-5-haiku-latest';
+        Result[2] := 'claude-3-opus-latest';
+        Exit;
+      end;
+      
+      // Standard OpenAI / DeepSeek / Qwen
+      if ACloudType = 0 then 
+      begin
+        // Remplacer chat/completions par models
+        BaseURL := StringReplace(BaseURL, '/chat/completions', '/models', [rfIgnoreCase]);
+        if CleanApiKey <> '' then
+          Http.CustomHeaders['Authorization'] := 'Bearer ' + CleanApiKey;
+      end;
+      
+      Resp := Http.Get(BaseURL);
+      if Resp.StatusCode = 200 then
+      begin
+        JSONObj := TJSONObject.ParseJSONValue(Resp.ContentAsString(TEncoding.UTF8)) as TJSONObject;
+        if Assigned(JSONObj) then
+        try
+          if ACloudType = 1 then // Parsing Gemini
+            ModelsArray := JSONObj.GetValue<TJSONArray>('models')
+          else // Parsing standard OpenAI (contient les modèles sous la clé 'data')
+            ModelsArray := JSONObj.GetValue<TJSONArray>('data');
+            
+          if Assigned(ModelsArray) then
+          begin
+            SetLength(Result, ModelsArray.Count);
+            for I := 0 to ModelsArray.Count - 1 do
+            begin
+              var ModelObj := ModelsArray.Items[I] as TJSONObject;
+              if ACloudType = 1 then
+              begin
+                // Gemini retourne "models/gemini-1.5-flash", on garde la partie après models/
+                var FullName := ModelObj.GetValue<string>('name');
+                if Pos('models/', FullName) > 0 then
+                  Result[I] := Copy(FullName, Pos('models/', FullName) + 7, Length(FullName))
+                else
+                  Result[I] := FullName;
+              end
+              else
+                Result[I] := ModelObj.GetValue<string>('id');
+            end;
+          end;
+        finally
+          JSONObj.Free;
+        end;
+      end;
+    except
+      // Renvoie un tableau vide en cas d'erreur réseau
+    end;
+  finally
+    Http.Free;
   end;
 end;
 
