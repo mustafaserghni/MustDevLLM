@@ -1,7 +1,5 @@
 unit MustDev.LLM.DockableForm;
 
-{$CODEPAGE 65001} // Force le compilateur Delphi à traiter ce fichier source en UTF-8
-
 { ************************************************************************** }
 {                                                                            }
 {  Must@Dev - AI Integration Module                                          }
@@ -44,6 +42,7 @@ type
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
+    procedure TrySetEdgeEngine;
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -56,7 +55,7 @@ implementation
 {$R *.dfm}
 
 uses
-  System.Win.Registry, Winapi.ShellAPI, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
+  System.Win.Registry, Winapi.ShellAPI, System.Rtti, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
   MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer;
 
 { TDockableLLMForm }
@@ -69,6 +68,33 @@ begin
   SaveStateNecessary := True;
 end;
 
+procedure TDockableLLMForm.TrySetEdgeEngine;
+var
+  Context: TRttiContext;
+  RttiType: TRttiType;
+  Prop: TRttiProperty;
+begin
+  // Utilisation de RTTI dynamique pour éviter toute dépendance de compilation statique 
+  // sur WindowsEngine (qui provoque des erreurs de compilation dcc32 sur certaines versions de Delphi)
+  Context := TRttiContext.Create;
+  try
+    RttiType := Context.GetType(FWebChat.ClassType);
+    if Assigned(RttiType) then
+    begin
+      Prop := RttiType.GetProperty('WindowsEngine');
+      if Assigned(Prop) and Prop.IsWritable then
+      begin
+        // TWindowsEngine.EdgeOnly a la valeur ordinale 2 (IEOnly=0, EdgeIfAvailable=1, EdgeOnly=2)
+        Prop.SetValue(FWebChat, TValue.FromOrdinal(Prop.PropertyType.Handle, 2));
+        TLLMLogger.LogInfo('Navigateur configuré avec succès sur le moteur Edge Chromium.');
+      end;
+    end;
+  except
+    on E: Exception do
+      TLLMLogger.LogError('Impossible de forcer le moteur Edge (WebView2) via RTTI', E);
+  end;
+end;
+
 procedure TDockableLLMForm.FormCreate(Sender: TObject);
 var
   Reg: TRegistry;
@@ -78,20 +104,12 @@ begin
   
   // Création dynamique du TWebBrowser
   FWebChat := TWebBrowser.Create(Self);
-  // Cast TWinControl pour contourner le bug de la propriété Parent en lecture seule sur certaines versions de TOleControl
   TWinControl(FWebChat).Parent := Self;
   FWebChat.Align := alClient;
   FWebChat.Visible := False;
   
-  // Configuration conditionnelle du moteur Edge Chromium (WebView2) introduit dans Delphi 10.4 (CompilerVersion 34.0)
-  {$IF CompilerVersion >= 34.0}
-  try
-    FWebChat.WindowsEngine := TWindowsEngine.EdgeOnly;
-  except
-    on E: Exception do
-      TLLMLogger.LogError('Impossible d''initialiser le moteur Edge Chromium (WebView2)', E);
-  end;
-  {$IFEND}
+  // Configuration dynamique du moteur de rendu Edge Chromium
+  TrySetEdgeEngine;
 
   // Actions de la barre d'outils
   btnSettings.Caption := ' ⚙️ Paramètres ';
@@ -135,6 +153,9 @@ procedure TDockableLLMForm.cbChatModeChange(Sender: TObject);
 var
   Reg: TRegistry;
   TargetURL: string;
+  HasEdgeProp: Boolean;
+  Context: TRttiContext;
+  RttiType: TRttiType;
 begin
   // Sauvegarde du mode sélectionné
   Reg := TRegistry.Create;
@@ -181,21 +202,37 @@ begin
       TargetURL := '';
     end;
 
-    // Sur les versions de Delphi antérieures à 10.4 (sans WebView2), on ouvre le navigateur système
-    // pour éviter d'utiliser Internet Explorer obsolète qui bloquera les connexions
-    {$IF CompilerVersion < 34.0}
-    if TargetURL <> '' then
-    begin
-      cbChatMode.ItemIndex := 0; // Repasse en mode API dans l'IHM
-      cbChatModeChange(nil);
-      ShellExecute(0, 'open', PChar(TargetURL), nil, nil, SW_SHOWNORMAL);
-      TLLMLogger.LogInfo('Ouverture du navigateur externe pour : ' + TargetURL);
+    // Détection dynamique si la propriété WindowsEngine existe (Delphi >= 10.4)
+    HasEdgeProp := False;
+    Context := TRttiContext.Create;
+    try
+      RttiType := Context.GetType(FWebChat.ClassType);
+      if Assigned(RttiType) and Assigned(RttiType.GetProperty('WindowsEngine')) then
+        HasEdgeProp := True;
+    except
+      HasEdgeProp := False;
     end;
-    {$ELSE}
-    FWebChat.Visible := True;
-    if TargetURL <> '' then
-      FWebChat.Navigate(TargetURL);
-    {$IFEND}
+
+    // Si on est sur une ancienne version de Delphi (sans support Edge Chromium), 
+    // on ouvre dans le navigateur externe pour éviter les plantages d'Internet Explorer
+    if not HasEdgeProp then
+    begin
+      if TargetURL <> '' then
+      begin
+        cbChatMode.ItemIndex := 0; // Repasse en mode API dans l'IHM
+        cbChatModeChange(nil);
+        ShellExecute(0, 'open', PChar(TargetURL), nil, nil, SW_SHOWNORMAL);
+        TLLMLogger.LogInfo('Ouverture du navigateur externe pour : ' + TargetURL);
+      end;
+    end;
+
+    // Version moderne : utilisation de WebView2 intégré
+    if HasEdgeProp then
+    begin
+      FWebChat.Visible := True;
+      if TargetURL <> '' then
+        FWebChat.Navigate(TargetURL);
+    end;
   end;
 end;
 
