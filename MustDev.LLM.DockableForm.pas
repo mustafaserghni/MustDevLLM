@@ -68,6 +68,7 @@ type
     procedure btnCreateUnitClick(Sender: TObject);
     
     // Application dynamique du thème de l'IDE de l'utilisateur (Clair / Sombre)
+    function IsIDEDarkMode: Boolean;
     procedure ApplyIDETheme;
   public
     constructor Create(AOwner: TComponent); override;
@@ -81,8 +82,9 @@ implementation
 {$R *.dfm}
 
 uses
-  System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, MustDev.LLM.Security, 
-  MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager;
+  System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, Vcl.Themes, 
+  MustDev.LLM.Security, MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, 
+  MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager;
 
 type
   // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
@@ -182,6 +184,17 @@ begin
   Result := '';
 end;
 
+// Alias pour compatibilité ToolsAPI moderne / héritée
+function TMustDevUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := TMustDevFile.Create(FSourceCode);
+end;
+
+function TMustDevUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
 function TMustDevUnitCreator.GetIntfFileName: string;
 begin
   Result := '';
@@ -197,6 +210,7 @@ begin
   Result := False;
 end;
 
+// Méthodes requises par l'interface IOTAModuleCreator
 function TMustDevUnitCreator.GetShowForm: Boolean;
 begin
   Result := False;
@@ -216,16 +230,6 @@ begin
   Result := nil;
 end;
 
-function TMustDevUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := TMustDevFile.Create(FSourceCode);
-end;
-
-function TMustDevUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
-
 { TDockableLLMForm }
 
 constructor TDockableLLMForm.Create(AOwner: TComponent);
@@ -237,20 +241,35 @@ begin
   FWebChat := nil;
 end;
 
+function TDockableLLMForm.IsIDEDarkMode: Boolean;
+var
+  LColor: TColor;
+  RGBVal: Cardinal;
+  R, G, B: Byte;
+begin
+  Result := False;
+  try
+    if Assigned(TStyleManager.ActiveStyle) then
+    begin
+      // Récupération de la couleur système de la fenêtre sous le style VCL actif de l'IDE
+      LColor := TStyleManager.ActiveStyle.GetSystemColor(clWindow);
+      RGBVal := ColorToRGB(LColor);
+      R := GetRValue(RGBVal);
+      G := GetGValue(RGBVal);
+      B := GetBValue(RGBVal);
+      // Formule de luminosité relative Y = 0.299*R + 0.587*G + 0.114*B
+      Result := (0.299 * R + 0.587 * G + 0.114 * B) < 128;
+    end;
+  except
+    Result := False;
+  end;
+end;
+
 procedure TDockableLLMForm.ApplyIDETheme;
 var
-  ThemeServices: IOTAThemeServices;
   IsDark: Boolean;
 begin
-  IsDark := False;
-  if Supports(BorlandIDEServices, IOTAThemeServices, ThemeServices) then
-  begin
-    try
-      IsDark := ThemeServices.IsDarkModeEnabled;
-    except
-      IsDark := False;
-    end;
-  end;
+  IsDark := IsIDEDarkMode;
 
   if IsDark then
   begin
@@ -780,15 +799,7 @@ var
   SenderColor, TextColor: TColor;
   IsDark: Boolean;
 begin
-  IsDark := False;
-  // Détecter l'état actuel du thème de l'IDE
-  try
-    var ThemeServices: IOTAThemeServices;
-    if Supports(BorlandIDEServices, IOTAThemeServices, ThemeServices) then
-      IsDark := ThemeServices.IsDarkModeEnabled;
-  except
-    IsDark := False;
-  end;
+  IsDark := IsIDEDarkMode;
 
   richChat.SelStart := Length(richChat.Text);
   richChat.SelAttributes.Style := [fsBold];
