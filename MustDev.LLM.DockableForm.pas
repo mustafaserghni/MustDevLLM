@@ -108,8 +108,8 @@ type
     function GetShowForm: Boolean;
     function GetShowSource: Boolean;
     function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
-    function NewImplFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-    function NewIntfFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
     procedure FormCreated(const FormEditor: IOTAFormEditor);
   end;
 
@@ -208,12 +208,12 @@ begin
   Result := nil;
 end;
 
-function TMustDevUnitCreator.NewImplFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+function TMustDevUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
 begin
   Result := TMustDevFile.Create(FSourceCode);
 end;
 
-function TMustDevUnitCreator.NewIntfFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+function TMustDevUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
 begin
   Result := nil;
 end;
