@@ -51,6 +51,7 @@ contains
   MustDev.LLM.DockableForm in 'MustDev.LLM.DockableForm.pas' {DockableLLMForm: TForm},
   MustDev.LLM.EditorIntegration in 'MustDev.LLM.EditorIntegration.pas',
   MustDev.LLM.AgentOrchestrator in 'MustDev.LLM.AgentOrchestrator.pas',
+  MustDev.LLM.ProjectMigrator in 'MustDev.LLM.ProjectMigrator.pas',
   MustDev.LLM.Registration in 'MustDev.LLM.Registration.pas';
 
 End.

@@ -84,7 +84,8 @@ implementation
 uses
   System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, Vcl.Themes, 
   MustDev.LLM.Security, MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, 
-  MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager, MustDev.LLM.AgentOrchestrator;
+  MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager, MustDev.LLM.AgentOrchestrator,
+  MustDev.LLM.ProjectMigrator;
 
 type
   // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
@@ -390,6 +391,7 @@ begin
   cbAgents.Items.Add('Agent : Auditeur de Code (Sécurité & Perf)');
   cbAgents.Items.Add('Agent : Testeur Senior (DUnitX)');
   cbAgents.Items.Add('Équipe d''Agents AI (Coder + Auditeur + Testeur)');
+  cbAgents.Items.Add('Agent : Migrateur de Projet (Ancien ➔ Delphi 11/12)');
   
   // Recherche dynamique de fichiers d'agents utilisateur (*.md) dans le dossier du projet actif
   ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
@@ -921,7 +923,7 @@ begin
                           'de faux objets (mocks) et l''ecriture de scenarios de tests unitaires DUnitX robustes.' + sLineBreak +
                           '=====================================' + sLineBreak;
   end
-  else if cbAgents.ItemIndex > 4 then
+  else if cbAgents.ItemIndex > 5 then
   begin
     // Agent utilisateur (Fichier .md trouve dans le projet)
     var ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
@@ -964,6 +966,39 @@ begin
         AddChatMsg('Coordonnateur', ResultReport, False);
         SetUIBusy(False);
       end);
+    Exit;
+  end;
+
+  // Si c'est l'agent de migration globale de projet
+  if cbAgents.ItemIndex = 5 then
+  begin
+    if MessageDlg('Attention : Vous vous appretez a lancer la migration automatique de tout le projet ouvert.' + sLineBreak +
+                  'Des fichiers de sauvegarde (.bak) seront crees pour chaque unite modifiee.' + sLineBreak + sLineBreak +
+                  'Souhaitez-vous continuer ?', mtWarning, [mbYes, mbNo], 0) = mrYes then
+    begin
+      SetUIBusy(True);
+      AddChatMsg('Migrateur', 'Initialisation de la migration du projet...', False);
+      
+      var Migrator := TProjectMigrator.Create(FProvider,
+        procedure(const LogMsg: string)
+        begin
+          AddChatMsg('Migrateur', LogMsg, False);
+        end);
+        
+      TThread.CreateAnonymousThread(
+        procedure
+        begin
+          try
+            Migrator.MigrateProject;
+          finally
+            TThread.Queue(nil,
+              procedure
+              begin
+                SetUIBusy(False);
+              end);
+          end;
+        end).Start;
+    end;
     Exit;
   end;
   
