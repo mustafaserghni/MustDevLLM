@@ -312,24 +312,30 @@ var
 begin
   Screen.Cursor := crHourGlass;
   try
-    if rgProviderType.ItemIndex = 0 then
-      Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text)
-    else
-      Models := TCloudRESTLLMProvider.FetchModels(cbCloudType.ItemIndex, edtEndpoint.Text, edtApiKey.Text);
-      
-    if Length(Models) > 0 then
-    begin
-      cbModel.Items.Clear;
-      for I := Low(Models) to High(Models) do
-        cbModel.Items.Add(Models[I]);
+    try
+      if rgProviderType.ItemIndex = 0 then
+        Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text)
+      else
+        Models := TCloudRESTLLMProvider.FetchModels(cbCloudType.ItemIndex, edtEndpoint.Text, edtApiKey.Text);
         
-      if cbModel.Items.Count > 0 then
-        cbModel.ItemIndex := 0;
-        
-      ShowMessage('Modèles récupérés avec succès.');
-    end
-    else
-      ShowMessage('Aucun modèle trouvé. Vérifiez votre URL, votre clé API et votre connexion réseau.');
+      if Length(Models) > 0 then
+      begin
+        cbModel.Items.Clear;
+        for I := Low(Models) to High(Models) do
+          cbModel.Items.Add(Models[I]);
+          
+        if cbModel.Items.Count > 0 then
+          cbModel.ItemIndex := 0;
+          
+        ShowMessage('Modèles récupérés avec succès.');
+      end
+      else
+        ShowMessage('Aucun modèle trouvé. Vérifiez votre URL, votre clé API et votre connexion réseau.');
+    except
+      on E: Exception do
+        ShowMessage('Erreur de connexion : ' + E.Message + sLineBreak + 
+                    'Vérifiez que votre serveur local (Ollama / LM Studio) est bien démarré.');
+    end;
   finally
     Screen.Cursor := crDefault;
   end;

@@ -165,17 +165,23 @@ begin
   Http := THTTPClient.Create;
   try
     try
-      // Résolution du localhost Windows (IPv6 ::1) en 127.0.0.1 pour contacter LM Studio / Ollama à coup sûr
       BaseURL := StringReplace(AEndpoint, 'localhost', '127.0.0.1', [rfIgnoreCase]);
       
-      if Pos('11434', BaseURL) > 0 then
+      // Reconstruction de l'URL Ollama ou LM Studio
+      if (Pos('11434', BaseURL) > 0) then
       begin
-        BaseURL := StringReplace(BaseURL, '/generate', '/tags', [rfIgnoreCase]);
-        BaseURL := StringReplace(BaseURL, '/chat', '/tags', [rfIgnoreCase]);
+        var P := Pos('11434', BaseURL);
+        BaseURL := Copy(BaseURL, 1, P + 4) + '/api/tags';
       end
-      else if Pos('/v1/', BaseURL) > 0 then
+      else if (Pos('1234', BaseURL) > 0) then
       begin
-        BaseURL := StringReplace(BaseURL, '/chat/completions', '/models', [rfIgnoreCase]);
+        var P := Pos('1234', BaseURL);
+        BaseURL := Copy(BaseURL, 1, P + 3) + '/v1/models';
+      end
+      else if (Pos('/v1/', BaseURL) > 0) then
+      begin
+        var P := Pos('/v1/', BaseURL);
+        BaseURL := Copy(BaseURL, 1, P + 3) + 'models';
       end
       else
         Exit;
@@ -206,8 +212,12 @@ begin
         finally
           JSONObj.Free;
         end;
-      end;
+      end
+      else
+        raise Exception.CreateFmt('HTTP %d: %s', [Resp.StatusCode, Resp.StatusText]);
     except
+      on E: Exception do
+        raise Exception.Create('Erreur de connexion au serveur local : ' + E.Message);
     end;
   finally
     Http.Free;
