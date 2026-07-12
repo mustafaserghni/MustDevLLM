@@ -14,7 +14,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, 
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.ToolWin, SHDocVw, // SHDocVw pour TWebBrowser
-  ToolsAPI, MustDev.LLM.Interfaces, MustDev.LLM.Factory;
+  ToolsAPI, DockForm, MustDev.LLM.Interfaces, MustDev.LLM.Factory;
 
 type
   TDockableLLMForm = class(TDockableForm)
@@ -76,6 +76,148 @@ uses
   System.Win.Registry, Winapi.ShellAPI, System.Rtti, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
   MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer;
 
+type
+  // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
+  TMustDevFile = class(TInterfacedObject, IOTAFile)
+  private
+    FSource: string;
+  public
+    constructor Create(const ASource: string);
+    function GetSource: string;
+    function GetAge: TDateTime;
+  end;
+
+  // Implémentation de IOTAModuleCreator pour créer une nouvelle unité dans RAD Studio
+  TMustDevUnitCreator = class(TInterfacedObject, IOTAModuleCreator)
+  private
+    FSourceCode: string;
+  public
+    constructor Create(const ASourceCode: string);
+    // IOTACreator
+    function GetCreatorType: string;
+    function GetExisting: Boolean;
+    function GetFileSystem: string;
+    function GetOwner: IOTAModule;
+    function GetUnnamed: Boolean;
+    // IOTAModuleCreator
+    function GetAncestorName: string;
+    function GetImplFileName: string;
+    function GetIntfFileName: string;
+    function GetFormName: string;
+    function GetMainForm: Boolean;
+    function GetShowForm: Boolean;
+    function GetShowSource: Boolean;
+    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+    function NewImplFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewIntfFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    procedure FormCreated(const FormEditor: IOTAFormEditor);
+  end;
+
+{ TMustDevFile }
+
+constructor TMustDevFile.Create(const ASource: string);
+begin
+  inherited Create;
+  FSource := ASource;
+end;
+
+function TMustDevFile.GetSource: string;
+begin
+  Result := FSource;
+end;
+
+function TMustDevFile.GetAge: TDateTime;
+begin
+  Result := -1; // Indique un fichier virtuel non sauvegardé
+end;
+
+{ TMustDevUnitCreator }
+
+constructor TMustDevUnitCreator.Create(const ASourceCode: string);
+begin
+  inherited Create;
+  FSourceCode := ASourceCode;
+end;
+
+function TMustDevUnitCreator.GetCreatorType: string;
+begin
+  Result := 'Unit'; // Type de créateur : Unité Pascal (.pas)
+end;
+
+function TMustDevUnitCreator.GetExisting: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetFileSystem: string;
+begin
+  Result := ''; // Utiliser le système de fichiers par défaut de l'IDE
+end;
+
+function TMustDevUnitCreator.GetOwner: IOTAModule;
+begin
+  Result := nil; // Pas de module propriétaire spécifique
+end;
+
+function TMustDevUnitCreator.GetUnnamed: Boolean;
+begin
+  Result := True; // Créer le fichier en tant que "Untitled" (ex: Unit2.pas)
+end;
+
+function TMustDevUnitCreator.GetAncestorName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetImplFileName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetIntfFileName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetFormName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetMainForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetShowForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetShowSource: Boolean;
+begin
+  Result := True; // Ouvrir l'éditeur de code automatiquement
+end;
+
+procedure TMustDevUnitCreator.FormCreated(const FormEditor: IOTAFormEditor);
+begin
+end;
+
+function TMustDevUnitCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
+function TMustDevUnitCreator.NewImplFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := TMustDevFile.Create(FSourceCode);
+end;
+
+function TMustDevUnitCreator.NewIntfFile(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
 { TDockableLLMForm }
 
 constructor TDockableLLMForm.Create(AOwner: TComponent);
@@ -111,7 +253,7 @@ begin
     end;
   except
     on E: Exception do
-      TLLMLogger.LogError('Impossible de forcer le moteur Edge (WebView2) via RTTI', E);
+      TLLMLogger.LogError('Impossible de forcer le moteur Edge (WebView2) via RTTI', E.Message);
   end;
 end;
 
@@ -243,8 +385,7 @@ end;
 procedure TDockableLLMForm.btnCreateUnitClick(Sender: TObject);
 var
   CodeToInsert: string;
-  ActionServices: IOTAActionServices;
-  Stream: TStringStream;
+  ModServices: IOTAModuleServices;
 begin
   CodeToInsert := GetTextToInteract;
   if CodeToInsert = '' then
@@ -253,16 +394,11 @@ begin
     Exit;
   end;
   
-  if Supports(BorlandIDEServices, IOTAActionServices, ActionServices) then
+  if Supports(BorlandIDEServices, IOTAModuleServices, ModServices) then
   begin
-    Stream := TStringStream.Create(CodeToInsert, TEncoding.UTF8);
-    try
-      // Ouvre une nouvelle unité sans nom pré-remplie avec le code
-      ActionServices.OpenUntitledFile('Unit2.pas', Stream);
-      TLLMLogger.LogSuccess('Nouvelle unité créée avec succès dans l''éditeur.');
-    finally
-      Stream.Free;
-    end;
+    // Utilisation du créateur personnalisé pour instancier proprement une nouvelle unité dans l'IDE
+    ModServices.CreateModule(TMustDevUnitCreator.Create(CodeToInsert));
+    TLLMLogger.LogSuccess('Nouvelle unité créée avec succès dans l''éditeur.');
   end;
 end;
 
@@ -450,7 +586,7 @@ begin
         TrySetEdgeEngine;
       except
         on E: Exception do
-          TLLMLogger.LogError('Erreur d''instanciation du navigateur', E);
+          TLLMLogger.LogError('Erreur d''instanciation du navigateur', E.Message);
       end;
     end;
 
