@@ -5,6 +5,7 @@ unit MustDev.LLM.DockableForm;
 {  Must@Dev - AI Integration Module                                          }
 {  Module: Dockable Form                                                     }
 {  Description: Fenêtre ancrable de l'IDE pour interagir avec le LLM.        }
+{               Interface utilisateur moderne, adaptative et thématisée.     }
 {                                                                            }
 { ************************************************************************** }
 
@@ -65,6 +66,9 @@ type
     function GetTextToInteract: string;
     procedure btnInsertCodeClick(Sender: TObject);
     procedure btnCreateUnitClick(Sender: TObject);
+    
+    // Application dynamique du thème de l'IDE de l'utilisateur (Clair / Sombre)
+    procedure ApplyIDETheme;
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -80,6 +84,148 @@ uses
   System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, MustDev.LLM.Security, 
   MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager;
 
+type
+  // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
+  TMustDevFile = class(TInterfacedObject, IOTAFile)
+  private
+    FSource: string;
+  public
+    constructor Create(const ASource: string);
+    function GetSource: string;
+    function GetAge: TDateTime;
+  end;
+
+  // Implémentation de IOTAModuleCreator pour créer une nouvelle unité dans RAD Studio
+  TMustDevUnitCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
+  private
+    FSourceCode: string;
+  public
+    constructor Create(const ASourceCode: string);
+    // IOTACreator
+    function GetCreatorType: string;
+    function GetExisting: Boolean;
+    function GetFileSystem: string;
+    function GetOwner: IOTAModule;
+    function GetUnnamed: Boolean;
+    // IOTAModuleCreator
+    function GetAncestorName: string;
+    function GetImplFileName: string;
+    function GetIntfFileName: string;
+    function GetFormName: string;
+    function GetMainForm: Boolean;
+    function GetShowForm: Boolean;
+    function GetShowSource: Boolean;
+    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+    procedure FormCreated(const FormEditor: IOTAFormEditor);
+  end;
+
+{ TMustDevFile }
+
+constructor TMustDevFile.Create(const ASource: string);
+begin
+  inherited Create;
+  FSource := ASource;
+end;
+
+function TMustDevFile.GetSource: string;
+begin
+  Result := FSource;
+end;
+
+function TMustDevFile.GetAge: TDateTime;
+begin
+  Result := -1; // Indique un fichier virtuel non sauvegardé
+end;
+
+{ TMustDevUnitCreator }
+
+constructor TMustDevUnitCreator.Create(const ASourceCode: string);
+begin
+  inherited Create;
+  FSourceCode := ASourceCode;
+end;
+
+function TMustDevUnitCreator.GetCreatorType: string;
+begin
+  Result := 'Unit'; // Type de créateur : Unité Pascal (.pas)
+end;
+
+function TMustDevUnitCreator.GetExisting: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetFileSystem: string;
+begin
+  Result := ''; // Utiliser le système de fichiers par défaut de l'IDE
+end;
+
+function TMustDevUnitCreator.GetOwner: IOTAModule;
+begin
+  Result := nil; // Pas de module propriétaire spécifique
+end;
+
+function TMustDevUnitCreator.GetUnnamed: Boolean;
+begin
+  Result := True; // Créer le fichier en tant que "Untitled" (ex: Unit2.pas)
+end;
+
+function TMustDevUnitCreator.GetAncestorName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetImplFileName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetIntfFileName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetFormName: string;
+begin
+  Result := '';
+end;
+
+function TMustDevUnitCreator.GetMainForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetShowForm: Boolean;
+begin
+  Result := False;
+end;
+
+function TMustDevUnitCreator.GetShowSource: Boolean;
+begin
+  Result := True; // Ouvrir l'éditeur de code automatiquement
+end;
+
+procedure TMustDevUnitCreator.FormCreated(const FormEditor: IOTAFormEditor);
+begin
+end;
+
+function TMustDevUnitCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
+function TMustDevUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := TMustDevFile.Create(FSourceCode);
+end;
+
+function TMustDevUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
+begin
+  Result := nil;
+end;
+
 { TDockableLLMForm }
 
 constructor TDockableLLMForm.Create(AOwner: TComponent);
@@ -89,6 +235,55 @@ begin
   AutoSave := True;
   SaveStateNecessary := True;
   FWebChat := nil;
+end;
+
+procedure TDockableLLMForm.ApplyIDETheme;
+var
+  ThemeServices: IOTAThemeServices;
+  IsDark: Boolean;
+begin
+  IsDark := False;
+  if Supports(BorlandIDEServices, IOTAThemeServices, ThemeServices) then
+  begin
+    try
+      IsDark := ThemeServices.IsDarkModeEnabled;
+    except
+      IsDark := False;
+    end;
+  end;
+
+  if IsDark then
+  begin
+    // Mode Sombre (Style moderne type VS Code)
+    richChat.Color := $001E1E1E;      // Fond gris anthracite
+    richChat.Font.Color := $00E0E0E0; // Texte blanc cassé
+    
+    memoPrompt.Color := $00252526;    // Fond de saisie légèrement plus clair
+    memoPrompt.Font.Color := $00E0E0E0;
+    
+    pnlBottom.Color := $001E1E1E;
+    pnlTop.Color := $001E1E1E;
+    pnlInputActions.Color := $001E1E1E;
+    
+    chkIncludeActiveUnit.Font.Color := $00E0E0E0;
+    lblSource.Font.Color := $0085E3B2; // Vert clair émeraude
+  end
+  else
+  begin
+    // Mode Clair (Style RAD Studio classique)
+    richChat.Color := clWindow;
+    richChat.Font.Color := clWindowText;
+    
+    memoPrompt.Color := clWindow;
+    memoPrompt.Font.Color := clWindowText;
+    
+    pnlBottom.Color := clBtnFace;
+    pnlTop.Color := clBtnFace;
+    pnlInputActions.Color := clBtnFace;
+    
+    chkIncludeActiveUnit.Font.Color := clWindowText;
+    lblSource.Font.Color := clHotLight; // Bleu standard
+  end;
 end;
 
 procedure TDockableLLMForm.TrySetEdgeEngine;
@@ -187,8 +382,6 @@ begin
         for F in Files do
         begin
           var Name := TPath.GetFileName(F);
-          // Éviter de répertorier les fichiers génériques système comme Agent.md/Gemini.md directement 
-          // sauf s'ils définissent des rôles spécifiques.
           cbAgents.Items.Add('Agent : ' + Name);
         end;
       end;
@@ -390,6 +583,9 @@ begin
   cbQuickActions.ItemIndex := 0;
   cbQuickActions.OnChange := cbQuickActionsChange;
   
+  // Application du thème initial (Clair / Sombre) basé sur l'IDE de l'utilisateur
+  ApplyIDETheme;
+
   // Chargement du dernier mode sauvegardé
   LMode := 0;
   Reg := TRegistry.Create;
@@ -575,25 +771,57 @@ begin
     lblSource.Caption := 'Source : Local Socket (' + FProvider.ModelName + ')'
   else
     lblSource.Caption := 'Source : Cloud REST (' + FProvider.ModelName + ')';
+    
+  ApplyIDETheme;
 end;
 
 procedure TDockableLLMForm.AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
+var
+  SenderColor, TextColor: TColor;
+  IsDark: Boolean;
 begin
+  IsDark := False;
+  // Détecter l'état actuel du thème de l'IDE
+  try
+    var ThemeServices: IOTAThemeServices;
+    if Supports(BorlandIDEServices, IOTAThemeServices, ThemeServices) then
+      IsDark := ThemeServices.IsDarkModeEnabled;
+  except
+    IsDark := False;
+  end;
+
   richChat.SelStart := Length(richChat.Text);
   richChat.SelAttributes.Style := [fsBold];
   
   if ASender = 'Système' then
-    richChat.SelAttributes.Color := clGray
+    SenderColor := clGray
   else if IsUser then
-    richChat.SelAttributes.Color := clHighlight
+  begin
+    if IsDark then
+      SenderColor := $00FFB366 // Bleu ciel doux HSL en mode sombre
+    else
+      SenderColor := clHighlight; // Bleu classique en mode clair
+  end
   else
-    richChat.SelAttributes.Color := clGreen;
-    
+  begin
+    if IsDark then
+      SenderColor := $0085E3B2 // Vert menthe doux HSL en mode sombre
+    else
+      SenderColor := clGreen; // Vert classique en mode clair
+  end;
+  
+  richChat.SelAttributes.Color := SenderColor;
   richChat.Lines.Add(ASender + ' :');
   
   richChat.SelStart := Length(richChat.Text);
   richChat.SelAttributes.Style := [];
-  richChat.SelAttributes.Color := clWindowText;
+  
+  if IsDark then
+    TextColor := $00E0E0E0 // Blanc cassé
+  else
+    TextColor := clWindowText; // Noir
+    
+  richChat.SelAttributes.Color := TextColor;
   richChat.Lines.Add(AMessage);
   richChat.Lines.Add(''); // Espacement
   
