@@ -44,6 +44,7 @@ type
     // Composants d'interface créés dynamiquement pour éviter les problèmes DFM
     cbQuickActions: TComboBox;
     chkIncludeActiveUnit: TCheckBox;
+    cbAgents: TComboBox;
     btnInsertCode: TToolButton;
     btnCreateUnit: TToolButton;
     
@@ -56,6 +57,9 @@ type
     procedure cbQuickActionsChange(Sender: TObject);
     // Récupération de l'unité de travail actuelle dans l'éditeur de l'IDE
     function GetActiveEditorCode(out AFileName: string): string;
+    
+    // Chargement de la liste des agents standard et utilisateur (*.md)
+    procedure InitAgentsList;
     
     // Extraction intelligente du code du Chat pour insertion/création
     function GetTextToInteract: string;
@@ -73,150 +77,8 @@ implementation
 {$R *.dfm}
 
 uses
-  System.Win.Registry, Winapi.ShellAPI, System.Rtti, MustDev.LLM.Security, MustDev.LLM.OptionsFrame, 
-  MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer;
-
-type
-  // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
-  TMustDevFile = class(TInterfacedObject, IOTAFile)
-  private
-    FSource: string;
-  public
-    constructor Create(const ASource: string);
-    function GetSource: string;
-    function GetAge: TDateTime;
-  end;
-
-  // Implémentation de IOTAModuleCreator pour créer une nouvelle unité dans RAD Studio
-  TMustDevUnitCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
-  private
-    FSourceCode: string;
-  public
-    constructor Create(const ASourceCode: string);
-    // IOTACreator
-    function GetCreatorType: string;
-    function GetExisting: Boolean;
-    function GetFileSystem: string;
-    function GetOwner: IOTAModule;
-    function GetUnnamed: Boolean;
-    // IOTAModuleCreator
-    function GetAncestorName: string;
-    function GetImplFileName: string;
-    function GetIntfFileName: string;
-    function GetFormName: string;
-    function GetMainForm: Boolean;
-    function GetShowForm: Boolean;
-    function GetShowSource: Boolean;
-    function NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
-    function NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-    function NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-    procedure FormCreated(const FormEditor: IOTAFormEditor);
-  end;
-
-{ TMustDevFile }
-
-constructor TMustDevFile.Create(const ASource: string);
-begin
-  inherited Create;
-  FSource := ASource;
-end;
-
-function TMustDevFile.GetSource: string;
-begin
-  Result := FSource;
-end;
-
-function TMustDevFile.GetAge: TDateTime;
-begin
-  Result := -1; // Indique un fichier virtuel non sauvegardé
-end;
-
-{ TMustDevUnitCreator }
-
-constructor TMustDevUnitCreator.Create(const ASourceCode: string);
-begin
-  inherited Create;
-  FSourceCode := ASourceCode;
-end;
-
-function TMustDevUnitCreator.GetCreatorType: string;
-begin
-  Result := 'Unit'; // Type de créateur : Unité Pascal (.pas)
-end;
-
-function TMustDevUnitCreator.GetExisting: Boolean;
-begin
-  Result := False;
-end;
-
-function TMustDevUnitCreator.GetFileSystem: string;
-begin
-  Result := ''; // Utiliser le système de fichiers par défaut de l'IDE
-end;
-
-function TMustDevUnitCreator.GetOwner: IOTAModule;
-begin
-  Result := nil; // Pas de module propriétaire spécifique
-end;
-
-function TMustDevUnitCreator.GetUnnamed: Boolean;
-begin
-  Result := True; // Créer le fichier en tant que "Untitled" (ex: Unit2.pas)
-end;
-
-function TMustDevUnitCreator.GetAncestorName: string;
-begin
-  Result := '';
-end;
-
-function TMustDevUnitCreator.GetImplFileName: string;
-begin
-  Result := '';
-end;
-
-function TMustDevUnitCreator.GetIntfFileName: string;
-begin
-  Result := '';
-end;
-
-function TMustDevUnitCreator.GetFormName: string;
-begin
-  Result := '';
-end;
-
-function TMustDevUnitCreator.GetMainForm: Boolean;
-begin
-  Result := False;
-end;
-
-function TMustDevUnitCreator.GetShowForm: Boolean;
-begin
-  Result := False;
-end;
-
-function TMustDevUnitCreator.GetShowSource: Boolean;
-begin
-  Result := True; // Ouvrir l'éditeur de code automatiquement
-end;
-
-procedure TMustDevUnitCreator.FormCreated(const FormEditor: IOTAFormEditor);
-begin
-end;
-
-function TMustDevUnitCreator.NewFormFile(const FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
-
-function TMustDevUnitCreator.NewImplSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := TMustDevFile.Create(FSourceCode);
-end;
-
-function TMustDevUnitCreator.NewIntfSource(const ModuleIdent, FormIdent, AncestorIdent: string): IOTAFile;
-begin
-  Result := nil;
-end;
+  System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, MustDev.LLM.Security, 
+  MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager;
 
 { TDockableLLMForm }
 
@@ -300,6 +162,41 @@ begin
     if Result = '' then
       Result := string(RawText);
   end;
+end;
+
+procedure TDockableLLMForm.InitAgentsList;
+var
+  ProjectPath: string;
+  Files: TArray<string>;
+  F: string;
+begin
+  cbAgents.Items.Clear;
+  cbAgents.Items.Add('-- Agent : Développeur Pascal/Delphi (Standard) --');
+  cbAgents.Items.Add('Agent : Architecte Logiciel (Conception)');
+  cbAgents.Items.Add('Agent : Auditeur de Code (Sécurité & Perf)');
+  cbAgents.Items.Add('Agent : Testeur Senior (DUnitX)');
+  
+  // Recherche dynamique de fichiers d'agents utilisateur (*.md) dans le dossier du projet actif
+  ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
+  if ProjectPath <> '' then
+  begin
+    try
+      if TDirectory.Exists(ProjectPath) then
+      begin
+        Files := TDirectory.GetFiles(ProjectPath, '*.md', TSearchOption.soTopDirectoryOnly);
+        for F in Files do
+        begin
+          var Name := TPath.GetFileName(F);
+          // Éviter de répertorier les fichiers génériques système comme Agent.md/Gemini.md directement 
+          // sauf s'ils définissent des rôles spécifiques.
+          cbAgents.Items.Add('Agent : ' + Name);
+        end;
+      end;
+    except
+      // Mode silencieux si accès dossier impossible
+    end;
+  end;
+  cbAgents.ItemIndex := 0;
 end;
 
 function TDockableLLMForm.GetTextToInteract: string;
@@ -447,22 +344,30 @@ begin
   btnCreateUnit.ShowHint := True;
   btnCreateUnit.OnClick := btnCreateUnitClick;
 
-  // Configuration dynamique des options de prompt dans pnlInputActions
-  chkOptimizeContext.Caption := 'Contextes projet (Agents.md)';
-  chkOptimizeContext.Width := 200;
-  chkOptimizeContext.Left := 8;
-  
+  // Masquer la case à cocher contextuelle statique
+  chkOptimizeContext.Visible := False;
+
+  // Création dynamique du ComboBox de gestion des Agents / Skills
+  cbAgents := TComboBox.Create(Self);
+  cbAgents.Parent := pnlInputActions;
+  cbAgents.Style := csDropDownList;
+  cbAgents.Width := 200;
+  cbAgents.Left := 8;
+  cbAgents.Top := 3;
+  cbAgents.Anchors := [akLeft, akTop];
+  InitAgentsList;
+
   // Création du checkbox d'unité active de travail
   chkIncludeActiveUnit := TCheckBox.Create(Self);
   chkIncludeActiveUnit.Parent := pnlInputActions;
   chkIncludeActiveUnit.Caption := 'Inclure l''unité active de l''IDE';
-  chkIncludeActiveUnit.Width := 200;
+  chkIncludeActiveUnit.Width := 190;
   chkIncludeActiveUnit.Left := 215;
   chkIncludeActiveUnit.Top := 6;
   chkIncludeActiveUnit.Checked := True;
   chkIncludeActiveUnit.Anchors := [akLeft, akTop];
 
-  // Création du ComboBox d'actions rapides sur le code Delphi
+  // Création du ComboBox d'actions rapides sur le code Delphi + Diagrammes UML
   cbQuickActions := TComboBox.Create(Self);
   cbQuickActions.Parent := pnlInputActions;
   cbQuickActions.Style := csDropDownList;
@@ -479,6 +384,9 @@ begin
   cbQuickActions.Items.Add('Générer la documentation XMLDoc');
   cbQuickActions.Items.Add('Optimiser les performances et la mémoire');
   cbQuickActions.Items.Add('Moderniser le code (inline vars, generics)');
+  cbQuickActions.Items.Add('UML : Diagramme de Classes (Mermaid)');
+  cbQuickActions.Items.Add('UML : Diagramme de Séquence (Mermaid)');
+  cbQuickActions.Items.Add('UML : Diagramme de Flux (Mermaid)');
   cbQuickActions.ItemIndex := 0;
   cbQuickActions.OnChange := cbQuickActionsChange;
   
@@ -510,6 +418,9 @@ begin
     4: memoPrompt.Text := 'Ajoute des commentaires de documentation XML structurés (XMLDoc avec <summary>, <param>, <returns>, <exception>) au-dessus de chaque méthode de ce code Delphi.';
     5: memoPrompt.Text := 'Propose des optimisations de performance et de gestion mémoire pour ce code Delphi (réduction des allocations, passage de paramètres en const, utilisation de boucles optimisées).';
     6: memoPrompt.Text := 'Refactore ce code Delphi pour le moderniser selon les standards récents : utilise des inline variables, déclare les boucles ''for var i'', emploie des Generics (TList, TDictionary) si approprié, et sécurise la destruction.';
+    7: memoPrompt.Text := 'Génère un diagramme de classes au format Mermaid UML représentant l''arborescence, les relations, attributs et méthodes de ce code Delphi. Utilise la syntaxe ''classDiagram''. Retourne uniquement le code Mermaid.';
+    8: memoPrompt.Text := 'Génère un diagramme de séquence au format Mermaid UML représentant les appels de méthodes et interactions entre les objets de ce code Delphi. Utilise la syntaxe ''sequenceDiagram''. Retourne uniquement le code Mermaid.';
+    9: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant la logique d''exécution et les embranchements de ce code Delphi. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
   end;
   
   if cbQuickActions.ItemIndex > 0 then
@@ -698,7 +609,7 @@ begin
   cbChatMode.Enabled := not IsBusy;
   cbQuickActions.Enabled := not IsBusy;
   chkIncludeActiveUnit.Enabled := not IsBusy;
-  chkOptimizeContext.Enabled := not IsBusy;
+  cbAgents.Enabled := not IsBusy;
   btnInsertCode.Enabled := not IsBusy;
   btnCreateUnit.Enabled := not IsBusy;
   if IsBusy then
@@ -716,9 +627,9 @@ end;
 procedure TDockableLLMForm.btnAskClick(Sender: TObject);
 var
   UserPrompt: string;
-  OptimizeContext: Boolean;
   LocalProvider: ILLMProvider; // Copie locale pour garantir la thread-safety
   ActiveFileCode, ActiveFileName: string;
+  SelectedAgentName, SelectedAgentRules: string;
 begin
   if Trim(memoPrompt.Text) = '' then Exit;
   
@@ -741,7 +652,52 @@ begin
   SetUIBusy(True);
   
   TLLMLogger.LogInfo('Requête LLM déclenchée depuis le Chat (Asynchrone)...');
-  OptimizeContext := chkOptimizeContext.Checked;
+  
+  // Récupération des règles de l'Agent/Skill sélectionné
+  SelectedAgentRules := '';
+  SelectedAgentName := cbAgents.Text;
+  
+  if cbAgents.ItemIndex = 1 then
+  begin
+    // Agent Architecte
+    SelectedAgentRules := '=== AGENT PERSONA: ARCHITECTE LOGICIEL ===' + sLineBreak +
+                          'Tu es un architecte logiciel Delphi senior. Concentre-toi sur la conception propre,' + sLineBreak +
+                          'les patrons de conception (design patterns), le decouplage et le respect des principes SOLID.' + sLineBreak +
+                          '==========================================' + sLineBreak;
+  end
+  else if cbAgents.ItemIndex = 2 then
+  begin
+    // Agent Auditeur
+    SelectedAgentRules := '=== AGENT PERSONA: AUDITEUR DE CODE ===' + sLineBreak +
+                          'Tu es un auditeur de code et expert en securite Delphi. Concentre-toi sur les fuites memoire,' + sLineBreak +
+                          'la securite des threads, la gestion des exceptions et l''optimisation des algorithmes.' + sLineBreak +
+                          '=======================================' + sLineBreak;
+  end
+  else if cbAgents.ItemIndex = 3 then
+  begin
+    // Agent Testeur
+    SelectedAgentRules := '=== AGENT PERSONA: TESTEUR SENIOR ===' + sLineBreak +
+                          'Tu es un testeur Delphi senior. Concentre-toi sur la testabilite du code, la creation' + sLineBreak +
+                          'de faux objets (mocks) et l''ecriture de scenarios de tests unitaires DUnitX robustes.' + sLineBreak +
+                          '=====================================' + sLineBreak;
+  end
+  else if cbAgents.ItemIndex > 3 then
+  begin
+    // Agent utilisateur (Fichier .md trouve dans le projet)
+    var ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
+    if ProjectPath <> '' then
+    begin
+      var MdFileName := StringReplace(SelectedAgentName, 'Agent : ', '', []);
+      var FullMdPath := TPath.Combine(ProjectPath, MdFileName);
+      if TFile.Exists(FullMdPath) then
+      begin
+        SelectedAgentRules := '=== AGENT CUSTOM RULES (' + MdFileName + ') ===' + sLineBreak +
+                              TFile.ReadAllText(FullMdPath, TEncoding.UTF8) + sLineBreak +
+                              '=======================================' + sLineBreak;
+        TLLMLogger.LogInfo('Regles de l''agent utilisateur ' + MdFileName + ' chargees.');
+      end;
+    end;
+  end;
   
   // Récupération de l'unité active de l'IDE en tant qu'unité de travail
   ActiveFileCode := '';
@@ -762,15 +718,8 @@ begin
       ResponseText, FinalPrompt: string;
     begin
       try
-        if OptimizeContext then
-          FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, ActiveFileCode)
-        else if ActiveFileCode <> '' then
-          // Si on n'optimise pas via les agents globaux mais qu'on veut injecter le code
-          FinalPrompt := UserPrompt + sLineBreak + sLineBreak + 
-                         '=== CONTEXTE DE L''UNITE ACTIVE ===' + sLineBreak + 
-                         '```pascal' + sLineBreak + ActiveFileCode + sLineBreak + '```'
-        else
-          FinalPrompt := UserPrompt;
+        // Optimisation du prompt via TPromptOptimizer avec les regles de l'agent selectionne
+        FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, ActiveFileCode, SelectedAgentRules);
           
         ResponseText := LocalProvider.Ask(FinalPrompt, True);
         

@@ -19,8 +19,9 @@ type
   private
     class function GetActiveProviderName: string;
   public
-    // Enrichit un prompt utilisateur avec des directives Delphi et le contexte Projet/Agent
-    class function Optimize(const ABasePrompt, ACodeContext: string): string;
+    // Surcharges pour enrichir le prompt utilisateur
+    class function Optimize(const ABasePrompt, ACodeContext: string): string; overload;
+    class function Optimize(const ABasePrompt, ACodeContext, ASystemRules: string): string; overload;
   end;
 
 implementation
@@ -66,12 +67,17 @@ begin
 end;
 
 class function TPromptOptimizer.Optimize(const ABasePrompt, ACodeContext: string): string;
+begin
+  Result := Optimize(ABasePrompt, ACodeContext, '');
+end;
+
+class function TPromptOptimizer.Optimize(const ABasePrompt, ACodeContext, ASystemRules: string): string;
 var
   ContextRules, ProjectPath, AgentFile, ProviderFile, ProviderName: string;
 begin
   TLLMLogger.LogInfo('Optimisation du prompt (Chargement des agents...)');
 
-  // Règles de base communes
+  // Règles de base communes de développement Delphi
   ContextRules := 
     '=== DELPHI DEVELOPMENT RULES ===' + sLineBreak +
     '1. Use modern Object Pascal syntax (Delphi 10.3+).' + sLineBreak +
@@ -80,13 +86,17 @@ begin
     '4. Keep code highly readable and follow standard Delphi naming conventions.' + sLineBreak +
     '================================' + sLineBreak;
     
-  // Injection Dynamique des fichiers Agents (Contexte Projet)
+  // Injection des règles de l'Agent sélectionné (Skill standard ou utilisateur)
+  if ASystemRules <> '' then
+    ContextRules := ContextRules + sLineBreak + ASystemRules;
+    
+  // Injection Dynamique des fichiers Agents globaux si présents
   ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
   if ProjectPath <> '' then
   begin
-    // Chargement de l'Agent générique du projet
+    // Chargement de l'Agent générique du projet (si l'utilisateur n'a pas sélectionné spécifiquement un autre fichier .md)
     AgentFile := TPath.Combine(ProjectPath, 'Agent.md');
-    if TFile.Exists(AgentFile) then
+    if TFile.Exists(AgentFile) and (Pos('AGENT CUSTOM RULES', ASystemRules) = 0) then
     begin
       ContextRules := ContextRules + sLineBreak + 
         '=== PROJECT CONTEXT (Agent.md) ===' + sLineBreak + 
