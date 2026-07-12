@@ -599,9 +599,12 @@ begin
   cbQuickActions.Items.Add('Générer la documentation XMLDoc');
   cbQuickActions.Items.Add('Optimiser les performances et la mémoire');
   cbQuickActions.Items.Add('Moderniser le code (inline vars, generics)');
-  cbQuickActions.Items.Add('UML : Diagramme de Classes (Mermaid)');
+  cbQuickActions.Items.Add('UML : Diagramme de Classes de l''Unité (Mermaid)');
   cbQuickActions.Items.Add('UML : Diagramme de Séquence (Mermaid)');
-  cbQuickActions.Items.Add('UML : Diagramme de Flux (Mermaid)');
+  cbQuickActions.Items.Add('UML : Flowchart de l''Unité Globale (Mermaid)');
+  cbQuickActions.Items.Add('UML : Flowchart d''une Procédure/Fonction (Mermaid)');
+  cbQuickActions.Items.Add('UML : Diagramme d''État (Mermaid)');
+  cbQuickActions.Items.Add('UML : Diagramme d''Activité (Mermaid)');
   cbQuickActions.ItemIndex := 0;
   cbQuickActions.OnChange := cbQuickActionsChange;
   
@@ -636,9 +639,12 @@ begin
     4: memoPrompt.Text := 'Ajoute des commentaires de documentation XML structurés (XMLDoc avec <summary>, <param>, <returns>, <exception>) au-dessus de chaque méthode de ce code Delphi.';
     5: memoPrompt.Text := 'Propose des optimisations de performance et de gestion mémoire pour ce code Delphi (réduction des allocations, passage de paramètres en const, utilisation de boucles optimisées).';
     6: memoPrompt.Text := 'Refactore ce code Delphi pour le moderniser selon les standards récents : utilise des inline variables, déclare les boucles ''for var i'', emploie des Generics (TList, TDictionary) si approprié, et sécurise la destruction.';
-    7: memoPrompt.Text := 'Génère un diagramme de classes au format Mermaid UML représentant l''arborescence, les relations, attributs et méthodes de ce code Delphi. Utilise la syntaxe ''classDiagram''. Retourne uniquement le code Mermaid.';
+    7: memoPrompt.Text := 'Génère un diagramme de classes au format Mermaid UML représentant l''arborescence, les relations, attributs et méthodes de cette unité Delphi. Utilise la syntaxe ''classDiagram''. Retourne uniquement le code Mermaid.';
     8: memoPrompt.Text := 'Génère un diagramme de séquence au format Mermaid UML représentant les appels de méthodes et interactions entre les objets de ce code Delphi. Utilise la syntaxe ''sequenceDiagram''. Retourne uniquement le code Mermaid.';
-    9: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant la logique d''exécution et les embranchements de ce code Delphi. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
+    9: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant l''architecture logique globale de cette unité Delphi. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
+    10: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant la logique d''exécution interne, les embranchements conditionnels (if, case) et les boucles (for, while, repeat) de la procédure ou fonction Delphi active/sélectionnée. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
+    11: memoPrompt.Text := 'Génère un diagramme d''état (State Diagram) au format Mermaid UML représentant les différents états possibles et les transitions logiques de ce code Delphi. Utilise la syntaxe ''stateDiagram-v2''. Retourne uniquement le code Mermaid.';
+    12: memoPrompt.Text := 'Génère un diagramme d''activité au format Mermaid UML décrivant le flux d''activité et les décisions de ce code Delphi. Utilise la syntaxe ''graph TB''. Retourne uniquement le code Mermaid.';
   end;
   
   if cbQuickActions.ItemIndex > 0 then
