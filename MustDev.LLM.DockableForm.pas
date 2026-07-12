@@ -84,7 +84,7 @@ implementation
 uses
   System.Win.Registry, Winapi.ShellAPI, System.Rtti, System.IOUtils, Vcl.Themes, 
   MustDev.LLM.Security, MustDev.LLM.OptionsFrame, MustDev.LLM.Logger, 
-  MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager;
+  MustDev.LLM.PromptOptimizer, MustDev.LLM.ProjectManager, MustDev.LLM.AgentOrchestrator;
 
 type
   // Implémentation requise de IOTAFile pour fournir le code source du fichier créé
@@ -389,6 +389,7 @@ begin
   cbAgents.Items.Add('Agent : Architecte Logiciel (Conception)');
   cbAgents.Items.Add('Agent : Auditeur de Code (Sécurité & Perf)');
   cbAgents.Items.Add('Agent : Testeur Senior (DUnitX)');
+  cbAgents.Items.Add('Équipe d''Agents AI (Coder + Auditeur + Testeur)');
   
   // Recherche dynamique de fichiers d'agents utilisateur (*.md) dans le dossier du projet actif
   ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
@@ -920,7 +921,7 @@ begin
                           'de faux objets (mocks) et l''ecriture de scenarios de tests unitaires DUnitX robustes.' + sLineBreak +
                           '=====================================' + sLineBreak;
   end
-  else if cbAgents.ItemIndex > 3 then
+  else if cbAgents.ItemIndex > 4 then
   begin
     // Agent utilisateur (Fichier .md trouve dans le projet)
     var ProjectPath := TMustDevProjectManager.GetActiveProjectPath;
@@ -946,6 +947,24 @@ begin
     ActiveFileCode := GetActiveEditorCode(ActiveFileName);
     if ActiveFileCode <> '' then
       ActiveFileCode := '// Unite de travail actuelle dans l''editeur de l''IDE : ' + ActiveFileName + sLineBreak + ActiveFileCode;
+  end;
+
+  // Si c'est l'équipe d'agents autonomes, on délègue à l'orchestrateur asynchrone
+  if cbAgents.ItemIndex = 4 then
+  begin
+    var Orchestrator := TAgentOrchestrator.Create(FProvider,
+      procedure(const AgentName, LogMsg: string)
+      begin
+        AddChatMsg(AgentName, LogMsg, False);
+      end);
+      
+    Orchestrator.ExecuteOrchestration(UserPrompt, ActiveFileCode,
+      procedure(ResultReport: string)
+      begin
+        AddChatMsg('Coordonnateur', ResultReport, False);
+        SetUIBusy(False);
+      end);
+    Exit;
   end;
   
   LocalProvider := FProvider; // Incrémente le compteur de références et protège l'instance dans le thread

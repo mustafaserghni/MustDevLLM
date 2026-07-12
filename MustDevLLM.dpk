@@ -32,7 +32,9 @@ requires
   rtl,
   vcl,
   designide,
-  RESTComponents;
+  RESTComponents,
+  vclie,
+  vcledge;
 
 contains
   MustDev.LLM.Interfaces in 'MustDev.LLM.Interfaces.pas',
@@ -48,6 +50,7 @@ contains
   MustDev.LLM.OptionsPage in 'MustDev.LLM.OptionsPage.pas',
   MustDev.LLM.DockableForm in 'MustDev.LLM.DockableForm.pas' {DockableLLMForm: TForm},
   MustDev.LLM.EditorIntegration in 'MustDev.LLM.EditorIntegration.pas',
+  MustDev.LLM.AgentOrchestrator in 'MustDev.LLM.AgentOrchestrator.pas',
   MustDev.LLM.Registration in 'MustDev.LLM.Registration.pas';
 
 End.
