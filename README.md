@@ -39,8 +39,9 @@ Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE De
   - **Bouton Nouvelle Unité (📄)** : Créez une nouvelle unité Delphi vierge dans l'IDE contenant le code généré en un seul clic via les services natifs de RAD Studio.
 
 - 📊 **Outils de Diagrammes UML Mermaid** :
-  - Traduisez instantanément votre code Delphi actif ou sélectionné en diagrammes UML au format Mermaid.
-  - Génération de **Diagrammes de Classes** (`classDiagram`), **Diagrammes de Séquence** (`sequenceDiagram`) ou **Diagrammes de Flux** (`graph TD`) prêts à être intégrés dans vos fichiers de documentation.
+  - Traduisez instantanément votre code Delphi actif ou sélectionné en diagrammes UML ou de flux au format Mermaid.
+  - Génération de **Diagrammes de Classes de l'Unité** (`classDiagram`), **Diagrammes de Séquence** (`sequenceDiagram`), **Flowchart Global de l'Unité** (`graph TD`), **Flowchart détaillé d'une Procédure/Fonction** avec ses boucles/conditions, **Diagrammes d'État** (`stateDiagram-v2`), et **Diagrammes d'Activité** (`graph TB`).
+  - Prêt à être directement intégré dans vos fichiers de documentation de dépôt.
 
 - 🎨 **Interface Moderne & Adaptative (Thématisation IDE)** :
   - Détection automatique et mathématique du thème de RAD Studio (Luminance de `clWindow` via le style VCL actif).
