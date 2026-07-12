@@ -1,6 +1,26 @@
 # Must@Dev - AI Integration Module pour RAD Studio
 
+> 🚀 **Une alternative Open Source, souveraine et multi-agents à Embarcadero Kai™**
+
 Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE Delphi / RAD Studio (via Open Tools API - OTA). Cette extension intègre de manière transparente la puissance des modèles d'intelligence artificielle (LLMs locaux et Cloud) directement dans votre environnement de développement.
+
+---
+
+## 💡 Pourquoi choisir Must@Dev AI face à Embarcadero Kai™ ?
+
+**Embarcadero Kai** est l'assistant IA commercial intégré de RAD Studio. **Must@Dev AI** se positionne comme une alternative open source plus puissante, plus flexible et respectueuse de la confidentialité de votre code :
+
+| Fonctionnalités | 🤖 Must@Dev AI (Open Source) | 💎 Embarcadero Kai (Commercial) |
+| :--- | :--- | :--- |
+| **Coût** | **100% Gratuit & Open Source** (MIT) | Payant (Inclus uniquement sous conditions ou abonnements) |
+| **Souveraineté & Confidentialité** | **Total** (Supporte les serveurs locaux Ollama/LM Studio hors ligne) | **Limité** (Envoie obligatoirement le code sur des serveurs Cloud tiers) |
+| **Choix des Modèles** | **Illimité** (Gemini, Claude, OpenAI, DeepSeek, Qwen, Ollama...) | **Unique** (Modèle imposé par Embarcadero) |
+| **Multi-Agents Autonomes** | **Oui** (Chaîne asynchrone Coder + Auditeur de fuites + Testeur DUnitX) | **Non** (Chat conversationnel simple à un seul agent) |
+| **Migration Globale de Projet** | **Oui** (Agent dédié pour migrer de vieux projets en Delphi 11/12 avec backups) | **Non** (Limité au code actif ou sélectionné) |
+| **Diagrammes UML Mermaid** | **Oui** (Génération de diagrammes de Classes, Séquence et Flux Mermaid) | **Non** |
+| **Boutons d'intégration IDE** | **Oui** (Boutons physiques *Insérer* et *Nouvelle Unité* natifs) | Basique |
+
+---
 
 ## ✨ Fonctionnalités Principales
 
