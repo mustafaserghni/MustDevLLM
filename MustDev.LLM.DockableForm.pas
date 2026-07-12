@@ -14,7 +14,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, 
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.ToolWin, SHDocVw, // SHDocVw pour TWebBrowser
-  ToolsAPI, DockForm, MustDev.LLM.Interfaces, MustDev.LLM.Factory;
+  ToolsAPI, MustDev.LLM.Interfaces, MustDev.LLM.Factory;
 
 type
   TDockableLLMForm = class(TDockableForm)
@@ -30,6 +30,7 @@ type
     pnlBottom: TPanel;
     memoPrompt: TMemo;
     btnAsk: TButton;
+    pnlInputActions: TPanel;
     chkOptimizeContext: TCheckBox;
     procedure btnAskClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -39,10 +40,20 @@ type
   private
     FProvider: ILLMProvider;
     FWebChat: TWebBrowser; // Navigateur créé dynamiquement sur demande (Lazy)
+    
+    // Composants d'interface créés dynamiquement pour éviter les problèmes DFM
+    cbQuickActions: TComboBox;
+    chkIncludeActiveUnit: TCheckBox;
+    
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
     procedure TrySetEdgeEngine;
+    
+    // Actions rapides sur le code Delphi
+    procedure cbQuickActionsChange(Sender: TObject);
+    // Récupération de l'unité de travail actuelle dans l'éditeur de l'IDE
+    function GetActiveEditorCode(out AFileName: string): string;
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -97,6 +108,51 @@ begin
   end;
 end;
 
+function TDockableLLMForm.GetActiveEditorCode(out AFileName: string): string;
+var
+  EditorServices: IOTAEditorServices;
+  EditBuffer: IOTAEditBuffer;
+  Reader: IOTAEditReader;
+  BytesRead, ChunkRead: Integer;
+  Buf: array[0..4095] of AnsiChar;
+  RawText: AnsiString;
+begin
+  Result := '';
+  AFileName := '';
+  RawText := '';
+  
+  if Supports(BorlandIDEServices, IOTAEditorServices, EditorServices) then
+  begin
+    EditBuffer := EditorServices.TopBuffer;
+    if Assigned(EditBuffer) then
+    begin
+      AFileName := ExtractFileName(EditBuffer.FileName);
+      Reader := EditBuffer.CreateReader;
+      if Assigned(Reader) then
+      begin
+        BytesRead := 0;
+        repeat
+          ChunkRead := Reader.GetText(BytesRead, Buf, Length(Buf) - 1);
+          if ChunkRead > 0 then
+          begin
+            Buf[ChunkRead] := #0;
+            RawText := RawText + AnsiString(Buf);
+            Inc(BytesRead, ChunkRead);
+          end;
+        until ChunkRead = 0;
+      end;
+    end;
+  end;
+  
+  if RawText <> '' then
+  begin
+    // Décodage UTF-8 natif si possible, sinon ANSI standard
+    Result := UTF8ToString(RawText);
+    if Result = '' then
+      Result := string(RawText);
+  end;
+end;
+
 procedure TDockableLLMForm.FormCreate(Sender: TObject);
 var
   Reg: TRegistry;
@@ -109,12 +165,46 @@ begin
   btnClearHistory.Caption := ' 🗑️ Nouvelle conversation ';
   
   lblSource.Caption := 'Source : Non initialisé';
-  chkOptimizeContext.Caption := 'Optimiser le prompt avec le contexte (Agents.md)';
   btnAsk.Caption := 'Envoyer';
   
   richChat.Clear;
   richChat.Font.Name := 'Segoe UI';
   richChat.Font.Size := 10;
+
+  // Configuration dynamique des options de prompt dans pnlInputActions
+  chkOptimizeContext.Caption := 'Contextes projet (Agents.md)';
+  chkOptimizeContext.Width := 200;
+  chkOptimizeContext.Left := 8;
+  
+  // Création du checkbox d'unité active de travail
+  chkIncludeActiveUnit := TCheckBox.Create(Self);
+  chkIncludeActiveUnit.Parent := pnlInputActions;
+  chkIncludeActiveUnit.Caption := 'Inclure l''unité active de l''IDE';
+  chkIncludeActiveUnit.Width := 200;
+  chkIncludeActiveUnit.Left := 215;
+  chkIncludeActiveUnit.Top := 6;
+  chkIncludeActiveUnit.Checked := True;
+  chkIncludeActiveUnit.Anchors := [akLeft, akTop];
+
+  // Création du ComboBox d'actions rapides sur le code Delphi
+  cbQuickActions := TComboBox.Create(Self);
+  cbQuickActions.Parent := pnlInputActions;
+  cbQuickActions.Style := csDropDownList;
+  cbQuickActions.Width := 260;
+  cbQuickActions.Height := 23;
+  cbQuickActions.Left := pnlInputActions.Width - cbQuickActions.Width - 10;
+  cbQuickActions.Top := 3;
+  cbQuickActions.Anchors := [akRight, akTop];
+  
+  cbQuickActions.Items.Add('-- Actions rapides sur le code --');
+  cbQuickActions.Items.Add('Expliquer le code sélectionné / actif');
+  cbQuickActions.Items.Add('Rechercher des bugs ou fuites');
+  cbQuickActions.Items.Add('Générer des tests unitaires DUnitX');
+  cbQuickActions.Items.Add('Générer la documentation XMLDoc');
+  cbQuickActions.Items.Add('Optimiser les performances et la mémoire');
+  cbQuickActions.Items.Add('Moderniser le code (inline vars, generics)');
+  cbQuickActions.ItemIndex := 0;
+  cbQuickActions.OnChange := cbQuickActionsChange;
 
   // Remplissage du ComboBox du mode Chat
   cbChatMode.Items.Clear;
@@ -140,6 +230,24 @@ begin
   
   cbChatMode.ItemIndex := LMode;
   cbChatModeChange(nil);
+end;
+
+procedure TDockableLLMForm.cbQuickActionsChange(Sender: TObject);
+begin
+  case cbQuickActions.ItemIndex of
+    1: memoPrompt.Text := 'Explique de manière synthétique ce code Delphi. Donne les points clés de sa logique, ses dépendances et son utilité.';
+    2: memoPrompt.Text := 'Analyse ce code Delphi à la recherche de bugs potentiels (fuites de mémoire, non-libération d''objets, exceptions non gérées, index hors limites, variables non initialisées) et propose des corrections.';
+    3: memoPrompt.Text := 'Génère une classe de tests unitaires DUnitX complète et moderne pour tester les fonctions ou méthodes de ce code. Inclus les Setup, TearDown et des assertions précises.';
+    4: memoPrompt.Text := 'Ajoute des commentaires de documentation XML structurés (XMLDoc avec <summary>, <param>, <returns>, <exception>) au-dessus de chaque méthode de ce code Delphi.';
+    5: memoPrompt.Text := 'Propose des optimisations de performance et de gestion mémoire pour ce code Delphi (réduction des allocations, passage de paramètres en const, utilisation de boucles optimisées).';
+    6: memoPrompt.Text := 'Refactore ce code Delphi pour le moderniser selon les standards récents : utilise des inline variables, déclare les boucles ''for var i'', emploie des Generics (TList, TDictionary) si approprié, et sécurise la destruction.';
+  end;
+  
+  if cbQuickActions.ItemIndex > 0 then
+  begin
+    memoPrompt.SetFocus;
+    memoPrompt.SelStart := Length(memoPrompt.Text);
+  end;
 end;
 
 procedure TDockableLLMForm.cbChatModeChange(Sender: TObject);
@@ -319,6 +427,9 @@ begin
   memoPrompt.Enabled := not IsBusy;
   btnClearHistory.Enabled := not IsBusy;
   cbChatMode.Enabled := not IsBusy;
+  cbQuickActions.Enabled := not IsBusy;
+  chkIncludeActiveUnit.Enabled := not IsBusy;
+  chkOptimizeContext.Enabled := not IsBusy;
   if IsBusy then
   begin
     btnAsk.Caption := 'Patience...';
@@ -336,6 +447,7 @@ var
   UserPrompt: string;
   OptimizeContext: Boolean;
   LocalProvider: ILLMProvider; // Copie locale pour garantir la thread-safety
+  ActiveFileCode, ActiveFileName: string;
 begin
   if Trim(memoPrompt.Text) = '' then Exit;
   
@@ -351,10 +463,25 @@ begin
   UserPrompt := memoPrompt.Text;
   AddChatMsg('Vous', UserPrompt, True);
   memoPrompt.Clear;
+  
+  // Rétablissement de la liste déroulante des actions
+  cbQuickActions.ItemIndex := 0;
+  
   SetUIBusy(True);
   
   TLLMLogger.LogInfo('Requête LLM déclenchée depuis le Chat (Asynchrone)...');
   OptimizeContext := chkOptimizeContext.Checked;
+  
+  // Récupération de l'unité active de l'IDE en tant qu'unité de travail
+  ActiveFileCode := '';
+  ActiveFileName := '';
+  if chkIncludeActiveUnit.Checked then
+  begin
+    ActiveFileCode := GetActiveEditorCode(ActiveFileName);
+    if ActiveFileCode <> '' then
+      ActiveFileCode := '// Unite de travail actuelle dans l''editeur de l''IDE : ' + ActiveFileName + sLineBreak + ActiveFileCode;
+  end;
+  
   LocalProvider := FProvider; // Incrémente le compteur de références et protège l'instance dans le thread
   
   // Multithreading : Exécution en arrière-plan
@@ -365,7 +492,12 @@ begin
     begin
       try
         if OptimizeContext then
-          FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, '')
+          FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, ActiveFileCode)
+        else if ActiveFileCode <> '' then
+          // Si on n'optimise pas via les agents globaux mais qu'on veut injecter le code
+          FinalPrompt := UserPrompt + sLineBreak + sLineBreak + 
+                         '=== CONTEXTE DE L''UNITE ACTIVE ===' + sLineBreak + 
+                         '```pascal' + sLineBreak + ActiveFileCode + sLineBreak + '```'
         else
           FinalPrompt := UserPrompt;
           
