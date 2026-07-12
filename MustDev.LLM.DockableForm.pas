@@ -88,7 +88,7 @@ type
   end;
 
   // Implémentation de IOTAModuleCreator pour créer une nouvelle unité dans RAD Studio
-  TMustDevUnitCreator = class(TInterfacedObject, IOTAModuleCreator)
+  TMustDevUnitCreator = class(TInterfacedObject, IOTACreator, IOTAModuleCreator)
   private
     FSourceCode: string;
   public
