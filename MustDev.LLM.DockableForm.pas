@@ -642,7 +642,9 @@ begin
     7: memoPrompt.Text := 'Génère un diagramme de classes au format Mermaid UML représentant l''arborescence, les relations, attributs et méthodes de cette unité Delphi. Utilise la syntaxe ''classDiagram''. Retourne uniquement le code Mermaid.';
     8: memoPrompt.Text := 'Génère un diagramme de séquence au format Mermaid UML représentant les appels de méthodes et interactions entre les objets de ce code Delphi. Utilise la syntaxe ''sequenceDiagram''. Retourne uniquement le code Mermaid.';
     9: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant l''architecture logique globale de cette unité Delphi. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
-    10: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant la logique d''exécution interne, les embranchements conditionnels (if, case) et les boucles (for, while, repeat) de la procédure ou fonction Delphi active/sélectionnée. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
+    10: memoPrompt.Text := 'Génère un diagramme de flux (Flowchart) au format Mermaid représentant la logique d''exécution interne, ' + 
+                           'les embranchements conditionnels (if, case) et les boucles (for, while, repeat) de la procédure ou ' + 
+                           'fonction Delphi active/sélectionnée. Utilise la syntaxe ''graph TD''. Retourne uniquement le code Mermaid.';
     11: memoPrompt.Text := 'Génère un diagramme d''état (State Diagram) au format Mermaid UML représentant les différents états possibles et les transitions logiques de ce code Delphi. Utilise la syntaxe ''stateDiagram-v2''. Retourne uniquement le code Mermaid.';
     12: memoPrompt.Text := 'Génère un diagramme d''activité au format Mermaid UML décrivant le flux d''activité et les décisions de ce code Delphi. Utilise la syntaxe ''graph TB''. Retourne uniquement le code Mermaid.';
   end;
@@ -997,11 +999,11 @@ begin
           try
             Migrator.MigrateProject;
           finally
-            TThread.Queue(nil,
+            TThread.Queue(nil, TThreadProcedure(
               procedure
               begin
                 SetUIBusy(False);
-              end);
+              end));
           end;
         end).Start;
     end;
