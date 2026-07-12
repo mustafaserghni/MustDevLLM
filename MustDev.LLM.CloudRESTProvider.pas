@@ -82,6 +82,8 @@ begin
   end;
 
   RestClient := TRESTClient.Create(TargetURL);
+  RestClient.ConnectTimeout := 60000; // 60 secondes max pour se connecter
+  RestClient.ReadTimeout := 120000;   // 120 secondes max pour lire la réponse (longues générations)
   RestRequest := TRESTRequest.Create(nil);
   RestResponse := TRESTResponse.Create(nil);
   JSONPayload := TJSONObject.Create;

@@ -49,6 +49,8 @@ var
 begin
   Result := '';
   Http := THTTPClient.Create;
+  Http.ConnectionTimeout := 60000; // 60 secondes max pour se connecter
+  Http.ResponseTimeout := 120000;   // 120 secondes max pour attendre la réponse
   JSONPayload := TJSONObject.Create;
   try
     JSONPayload.AddPair('model', FModel);

@@ -67,8 +67,8 @@ begin
   FLock.Acquire;
   try
     try
-      // Création du répertoire Logs dans le dossier utilisateur racine (C:\Users\<Nom>\MustDevLLM)
-      LogDir := TPath.Combine(GetEnvironmentVariable('USERPROFILE'), 'MustDevLLM');
+      // Création du répertoire Logs dans le dossier Documents (C:\Users\<Nom>\Documents\MustDevLLM)
+      LogDir := TPath.Combine(TPath.GetDocumentsPath, 'MustDevLLM');
       if not TDirectory.Exists(LogDir) then
         TDirectory.CreateDirectory(LogDir);
         
