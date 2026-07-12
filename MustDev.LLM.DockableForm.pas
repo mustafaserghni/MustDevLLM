@@ -44,6 +44,8 @@ type
     // Composants d'interface créés dynamiquement pour éviter les problèmes DFM
     cbQuickActions: TComboBox;
     chkIncludeActiveUnit: TCheckBox;
+    btnInsertCode: TToolButton;
+    btnCreateUnit: TToolButton;
     
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
@@ -54,6 +56,11 @@ type
     procedure cbQuickActionsChange(Sender: TObject);
     // Récupération de l'unité de travail actuelle dans l'éditeur de l'IDE
     function GetActiveEditorCode(out AFileName: string): string;
+    
+    // Extraction intelligente du code du Chat pour insertion/création
+    function GetTextToInteract: string;
+    procedure btnInsertCodeClick(Sender: TObject);
+    procedure btnCreateUnitClick(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -153,10 +160,117 @@ begin
   end;
 end;
 
+function TDockableLLMForm.GetTextToInteract: string;
+var
+  SelText: string;
+  Lines: TStrings;
+  I: Integer;
+  InsideBlock: Boolean;
+  BlockText: TStringBuilder;
+begin
+  Result := '';
+  
+  // 1. Récupérer la sélection de l'utilisateur dans le chat
+  SelText := richChat.SelText;
+  if Trim(SelText) <> '' then
+  begin
+    Result := SelText;
+    Exit;
+  end;
+  
+  // 2. Sinon, parcourir le texte du chat de bas en haut pour extraire le dernier bloc de code ```pascal / ```delphi / ```
+  Lines := richChat.Lines;
+  InsideBlock := False;
+  BlockText := TStringBuilder.Create;
+  try
+    for I := Lines.Count - 1 downto 0 do
+    begin
+      var Line := Trim(Lines[I]);
+      if Line.StartsWith('```') then
+      begin
+        if not InsideBlock then
+          InsideBlock := True // Début de l'extraction (fin du bloc en lisant de bas en haut)
+        else
+          Break; // Fin du bloc (début du bloc en remontant), on a tout extrait
+      end
+      else if InsideBlock then
+      begin
+        BlockText.Insert(0, Lines[I] + sLineBreak);
+      end;
+    end;
+    Result := Trim(BlockText.ToString);
+  finally
+    BlockText.Free;
+  end;
+end;
+
+procedure TDockableLLMForm.btnInsertCodeClick(Sender: TObject);
+var
+  CodeToInsert: string;
+  EditorServices: IOTAEditorServices;
+  EditBuffer: IOTAEditBuffer;
+  Block: IOTAEditBlock;
+begin
+  CodeToInsert := GetTextToInteract;
+  if CodeToInsert = '' then
+  begin
+    ShowMessage('Aucun code ou texte sélectionné trouvé dans l''historique du chat.');
+    Exit;
+  end;
+  
+  if Supports(BorlandIDEServices, IOTAEditorServices, EditorServices) then
+  begin
+    EditBuffer := EditorServices.TopBuffer;
+    if Assigned(EditBuffer) then
+    begin
+      Block := EditBuffer.EditBlock;
+      
+      // Remplacer la sélection active de l'éditeur ou insérer à la position du curseur
+      if Block.Size > 0 then
+      begin
+        EditBuffer.EditPosition.Move(Block.StartingRow, Block.StartingColumn);
+        EditBuffer.EditPosition.Delete(Block.Size);
+      end;
+      
+      EditBuffer.EditPosition.InsertText(CodeToInsert);
+      TLLMLogger.LogSuccess('Code inséré avec succès dans l''éditeur.');
+    end
+    else
+      ShowMessage('Aucun fichier ouvert au premier plan dans l''éditeur de RAD Studio.');
+  end;
+end;
+
+procedure TDockableLLMForm.btnCreateUnitClick(Sender: TObject);
+var
+  CodeToInsert: string;
+  ActionServices: IOTAActionServices;
+  Stream: TStringStream;
+begin
+  CodeToInsert := GetTextToInteract;
+  if CodeToInsert = '' then
+  begin
+    ShowMessage('Aucun code ou texte sélectionné à utiliser pour créer une unité.');
+    Exit;
+  end;
+  
+  if Supports(BorlandIDEServices, IOTAActionServices, ActionServices) then
+  begin
+    Stream := TStringStream.Create(CodeToInsert, TEncoding.UTF8);
+    try
+      // Ouvre une nouvelle unité sans nom pré-remplie avec le code
+      ActionServices.OpenUntitledFile('Unit2.pas', Stream);
+      TLLMLogger.LogSuccess('Nouvelle unité créée avec succès dans l''éditeur.');
+    finally
+      Stream.Free;
+    end;
+  end;
+end;
+
 procedure TDockableLLMForm.FormCreate(Sender: TObject);
 var
   Reg: TRegistry;
   LMode: Integer;
+  Sep2: TToolButton;
 begin
   Caption := 'Must@Dev - AI Assistant';
   
@@ -170,6 +284,32 @@ begin
   richChat.Clear;
   richChat.Font.Name := 'Segoe UI';
   richChat.Font.Size := 10;
+
+  // Remplissage du ComboBox du mode Chat
+  cbChatMode.Items.Clear;
+  cbChatMode.Items.Add('Mode API (Clé de sécurité)');
+  cbChatMode.Items.Add('ChatGPT (Compte)');
+  cbChatMode.Items.Add('Google Gemini (Compte)');
+  cbChatMode.Items.Add('Anthropic Claude (Compte)');
+  
+  // Création dynamique des boutons d'interaction en temps réel avec l'IDE
+  Sep2 := TToolButton.Create(Self);
+  Sep2.Parent := ToolBar1;
+  Sep2.Style := tbsSeparator;
+  
+  btnInsertCode := TToolButton.Create(Self);
+  btnInsertCode.Parent := ToolBar1;
+  btnInsertCode.Caption := ' 📥 Insérer ';
+  btnInsertCode.Hint := 'Insérer le code sélectionné ou le dernier bloc généré dans l''éditeur';
+  btnInsertCode.ShowHint := True;
+  btnInsertCode.OnClick := btnInsertCodeClick;
+  
+  btnCreateUnit := TToolButton.Create(Self);
+  btnCreateUnit.Parent := ToolBar1;
+  btnCreateUnit.Caption := ' 📄 Nouvelle unité ';
+  btnCreateUnit.Hint := 'Créer un nouveau fichier contenant le code sélectionné ou généré';
+  btnCreateUnit.ShowHint := True;
+  btnCreateUnit.OnClick := btnCreateUnitClick;
 
   // Configuration dynamique des options de prompt dans pnlInputActions
   chkOptimizeContext.Caption := 'Contextes projet (Agents.md)';
@@ -205,13 +345,6 @@ begin
   cbQuickActions.Items.Add('Moderniser le code (inline vars, generics)');
   cbQuickActions.ItemIndex := 0;
   cbQuickActions.OnChange := cbQuickActionsChange;
-
-  // Remplissage du ComboBox du mode Chat
-  cbChatMode.Items.Clear;
-  cbChatMode.Items.Add('Mode API (Clé de sécurité)');
-  cbChatMode.Items.Add('ChatGPT (Compte)');
-  cbChatMode.Items.Add('Google Gemini (Compte)');
-  cbChatMode.Items.Add('Anthropic Claude (Compte)');
   
   // Chargement du dernier mode sauvegardé
   LMode := 0;
@@ -430,6 +563,8 @@ begin
   cbQuickActions.Enabled := not IsBusy;
   chkIncludeActiveUnit.Enabled := not IsBusy;
   chkOptimizeContext.Enabled := not IsBusy;
+  btnInsertCode.Enabled := not IsBusy;
+  btnCreateUnit.Enabled := not IsBusy;
   if IsBusy then
   begin
     btnAsk.Caption := 'Patience...';
