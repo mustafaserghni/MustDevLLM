@@ -35,3 +35,10 @@ __recovery/
 
 # Windows Thumbs
 Thumbs.db
+
+# User Agent and LLM Context Files
+Agent.md
+Gemini.md
+Claude.md
+OpenAI.md
+Local.md
