@@ -53,7 +53,6 @@ type
     FAttachments: TStringList;
     FIsRequestActive: Boolean;
     
-    procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
     procedure btnStopClick(Sender: TObject);
@@ -80,6 +79,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure InitProvider;
   end;
 
 var

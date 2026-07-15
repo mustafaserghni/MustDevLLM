@@ -11,7 +11,7 @@ unit MustDev.LLM.OptionsPage;
 interface
 
 uses
-  System.SysUtils, System.Classes, Vcl.Forms, ToolsAPI, MustDev.LLM.OptionsFrame;
+  System.SysUtils, System.Classes, Vcl.Forms, ToolsAPI, MustDev.LLM.OptionsFrame, MustDev.LLM.DockableForm;
 
 type
   TMustDevOptionsPage = class(TInterfacedObject, INTAAddInOptions)
@@ -60,6 +60,8 @@ begin
   if Accepted and Assigned(FFrame) then
   begin
     FFrame.btnSaveClick(nil);
+    if Assigned(DockableLLMForm) then
+      DockableLLMForm.InitProvider;
   end;
   FFrame := nil;
 end;
