@@ -211,18 +211,17 @@ end;
 
 procedure TLLMOptionsFrame.rgProviderTypeClick(Sender: TObject);
 begin
-  btnRefreshModels.Enabled := True; // Toujours actif, permet de lister les modèles Cloud ET Locaux !
+  btnRefreshModels.Enabled := True;
+  edtApiKey.Enabled := True;
+  edtApiKey.Color := clWindow;
+  
   if rgProviderType.ItemIndex = 0 then // Local
   begin
-    edtApiKey.Enabled := False;
-    edtApiKey.Color := clBtnFace;
     cbCloudType.Enabled := False;
     cbCloudType.Color := clBtnFace;
   end
   else // Cloud
   begin
-    edtApiKey.Enabled := True;
-    edtApiKey.Color := clWindow;
     cbCloudType.Enabled := True;
     cbCloudType.Color := clWindow;
   end;
@@ -314,7 +313,7 @@ begin
   try
     try
       if rgProviderType.ItemIndex = 0 then
-        Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text)
+        Models := TLocalSocketLLMProvider.FetchModels(edtEndpoint.Text, edtApiKey.Text)
       else
         Models := TCloudRESTLLMProvider.FetchModels(cbCloudType.ItemIndex, edtEndpoint.Text, edtApiKey.Text);
         

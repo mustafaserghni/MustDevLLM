@@ -27,7 +27,7 @@ type
     procedure CancelRequest; override;
     
     // Interroge l'API locale (Ollama ou LM Studio) pour lister les modèles installés
-    class function FetchModels(const AEndpoint: string): TArray<string>;
+    class function FetchModels(const AEndpoint, AApiKey: string): TArray<string>;
   end;
 
 implementation
@@ -129,6 +129,8 @@ begin
   Http := THTTPClient.Create;
   Http.OnReceiveData := HttpReceiveData;
   FIsCancelled := False;
+  if FApiKey <> '' then
+    Http.CustomHeaders['Authorization'] := 'Bearer ' + FApiKey;
   Http.ConnectionTimeout := 60000;
   Http.ResponseTimeout := 120000;
   JSONPayload := TJSONObject.Create;
@@ -301,7 +303,7 @@ begin
   AAbort := FIsCancelled;
 end;
 
-class function TLocalSocketLLMProvider.FetchModels(const AEndpoint: string): TArray<string>;
+class function TLocalSocketLLMProvider.FetchModels(const AEndpoint, AApiKey: string): TArray<string>;
 var
   Http: THTTPClient;
   Resp: IHTTPResponse;
@@ -310,9 +312,11 @@ var
   ModelsArray: TJSONArray;
   I: Integer;
 begin
-  SetLength(Result, 0);
+  Result := [];
   Http := THTTPClient.Create;
   try
+    if AApiKey <> '' then
+      Http.CustomHeaders['Authorization'] := 'Bearer ' + AApiKey;
     try
       BaseURL := StringReplace(AEndpoint, 'localhost', '127.0.0.1', [rfIgnoreCase]);
       
