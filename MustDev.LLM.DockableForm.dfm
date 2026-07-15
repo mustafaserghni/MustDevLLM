@@ -2,8 +2,8 @@ object DockableLLMForm: TDockableLLMForm
   Left = 0
   Top = 0
   Caption = 'Must@Dev - AI Assistant'
-  ClientHeight = 918
-  ClientWidth = 892
+  ClientHeight = 833
+  ClientWidth = 826
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -15,8 +15,8 @@ object DockableLLMForm: TDockableLLMForm
   TextHeight = 15
   object Splitter1: TSplitter
     Left = 0
-    Top = 768
-    Width = 892
+    Top = 683
+    Width = 826
     Height = 5
     Cursor = crVSplit
     Align = alBottom
@@ -27,7 +27,7 @@ object DockableLLMForm: TDockableLLMForm
   object ToolBar1: TToolBar
     Left = 0
     Top = 0
-    Width = 892
+    Width = 826
     Height = 29
     ButtonHeight = 21
     ButtonWidth = 136
@@ -68,7 +68,7 @@ object DockableLLMForm: TDockableLLMForm
   object pnlTop: TPanel
     Left = 0
     Top = 29
-    Width = 892
+    Width = 826
     Height = 30
     Align = alTop
     BevelOuter = bvNone
@@ -91,8 +91,8 @@ object DockableLLMForm: TDockableLLMForm
   object richChat: TRichEdit
     Left = 0
     Top = 59
-    Width = 892
-    Height = 709
+    Width = 826
+    Height = 624
     Align = alClient
     Font.Charset = ANSI_CHARSET
     Font.Color = clWindowText
@@ -108,8 +108,8 @@ object DockableLLMForm: TDockableLLMForm
   end
   object pnlBottom: TPanel
     Left = 0
-    Top = 773
-    Width = 892
+    Top = 688
+    Width = 826
     Height = 145
     Align = alBottom
     BevelOuter = bvNone
@@ -119,7 +119,7 @@ object DockableLLMForm: TDockableLLMForm
     object pnlInputActions: TPanel
       Left = 0
       Top = 115
-      Width = 892
+      Width = 826
       Height = 30
       Align = alBottom
       BevelOuter = bvNone
@@ -139,7 +139,7 @@ object DockableLLMForm: TDockableLLMForm
     object memoPrompt: TMemo
       Left = 0
       Top = 0
-      Width = 812
+      Width = 746
       Height = 115
       Align = alClient
       ScrollBars = ssVertical
@@ -147,7 +147,7 @@ object DockableLLMForm: TDockableLLMForm
       ExplicitWidth = 740
     end
     object btnAsk: TButton
-      Left = 812
+      Left = 746
       Top = 0
       Width = 80
       Height = 115
