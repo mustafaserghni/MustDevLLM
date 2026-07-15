@@ -32,6 +32,9 @@ type
 
 implementation
 
+uses
+  MustDev.LLM.Logger;
+
 { TLocalSocketLLMProvider }
 
 function TLocalSocketLLMProvider.GetProviderType: TProviderType;
@@ -243,7 +246,9 @@ begin
     StringStream := TStringStream.Create(JSONPayload.ToString, TEncoding.UTF8);
     try
       Http.ContentType := 'application/json';
+      TLLMLogger.LogInfo(Format('Requête HTTP POST vers le serveur local : %s (Modèle : %s, Taille : %d octets)', [TargetURL, FModel, StringStream.Size]));
       Resp := Http.Post(TargetURL, StringStream);
+      TLLMLogger.LogInfo(Format('Réponse HTTP reçue du serveur local. Code : %d (%s)', [Resp.StatusCode, Resp.StatusText]));
       
       if Resp.StatusCode = 200 then
       begin
@@ -283,7 +288,33 @@ begin
         end;
       end
       else
-        raise Exception.CreateFmt('Erreur fournisseur local (Code: %d): %s', [Resp.StatusCode, Resp.StatusText]);
+      begin
+        var ErrDetail := Resp.ContentAsString(TEncoding.UTF8);
+        TLLMLogger.LogError(Format('Erreur serveur local HTTP %d : %s', [Resp.StatusCode, Resp.StatusText]), ErrDetail);
+        
+        var ErrMsg := '';
+        try
+          var ErrJSON := TJSONObject.ParseJSONValue(ErrDetail) as TJSONObject;
+          if Assigned(ErrJSON) then
+          try
+            var ErrNode := ErrJSON.GetValue<TJSONObject>('error');
+            if Assigned(ErrNode) then
+              ErrMsg := ErrNode.GetValue<string>('message')
+            else
+              ErrMsg := ErrJSON.GetValue<string>('error');
+          finally
+            ErrJSON.Free;
+          end;
+        except
+        end;
+        
+        if ErrMsg <> '' then
+          raise Exception.CreateFmt('Erreur serveur local (Code: %d): %s' + sLineBreak + 'Message : %s', [Resp.StatusCode, Resp.StatusText, ErrMsg])
+        else if ErrDetail <> '' then
+          raise Exception.CreateFmt('Erreur serveur local (Code: %d): %s' + sLineBreak + 'Détails : %s', [Resp.StatusCode, Resp.StatusText, Copy(ErrDetail, 1, 500)])
+        else
+          raise Exception.CreateFmt('Erreur serveur local (Code: %d): %s', [Resp.StatusCode, Resp.StatusText]);
+      end;
     finally
       StringStream.Free;
     end;
@@ -367,7 +398,11 @@ begin
         end;
       end
       else
-        raise Exception.CreateFmt('HTTP %d: %s', [Resp.StatusCode, Resp.StatusText]);
+      begin
+        var ErrDetail := Resp.ContentAsString(TEncoding.UTF8);
+        TLLMLogger.LogError(Format('Erreur FetchModels HTTP %d : %s', [Resp.StatusCode, Resp.StatusText]), ErrDetail);
+        raise Exception.CreateFmt('HTTP %d: %s (Détails: %s)', [Resp.StatusCode, Resp.StatusText, Copy(ErrDetail, 1, 200)]);
+      end;
     except
       on E: Exception do
         raise Exception.Create('Erreur de connexion au serveur local : ' + E.Message);

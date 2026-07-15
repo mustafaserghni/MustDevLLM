@@ -49,12 +49,14 @@ type
     btnInsertCode: TToolButton;
     btnCreateUnit: TToolButton;
     btnAttach: TToolButton;
+    btnStop: TToolButton;
     FAttachments: TStringList;
     FIsRequestActive: Boolean;
     
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
     procedure SetUIBusy(IsBusy: Boolean);
+    procedure btnStopClick(Sender: TObject);
     procedure TrySetEdgeEngine;
     
     // Actions rapides sur le code Delphi
@@ -583,6 +585,18 @@ begin
   btnAttach.Hint := 'Joindre des fichiers ou des images à la conversation';
   btnAttach.ShowHint := True;
   btnAttach.OnClick := btnAttachClick;
+  
+  var Sep4 := TToolButton.Create(Self);
+  Sep4.Parent := ToolBar1;
+  Sep4.Style := tbsSeparator;
+  
+  btnStop := TToolButton.Create(Self);
+  btnStop.Parent := ToolBar1;
+  btnStop.Caption := ' 🛑 Arrêter ';
+  btnStop.Hint := 'Interrompre la requête LLM en cours';
+  btnStop.ShowHint := True;
+  btnStop.Enabled := False;
+  btnStop.OnClick := btnStopClick;
 
   // Masquer la case à cocher contextuelle statique
   chkOptimizeContext.Visible := False;
@@ -878,7 +892,7 @@ end;
 
 procedure TDockableLLMForm.SetUIBusy(IsBusy: Boolean);
 begin
-  btnAsk.Enabled := True; // Reste actif pour permettre l'annulation
+  btnAsk.Enabled := not IsBusy;
   memoPrompt.Enabled := not IsBusy;
   btnClearHistory.Enabled := not IsBusy;
   cbChatMode.Enabled := not IsBusy;
@@ -888,10 +902,11 @@ begin
   btnInsertCode.Enabled := not IsBusy;
   btnCreateUnit.Enabled := not IsBusy;
   btnAttach.Enabled := not IsBusy;
+  btnStop.Enabled := IsBusy;
   
   if IsBusy then
   begin
-    btnAsk.Caption := '🛑 Arrêter';
+    btnAsk.Caption := 'Patience...';
     Screen.Cursor := crHourGlass;
   end
   else
@@ -909,17 +924,6 @@ var
   SelectedAgentName, SelectedAgentRules: string;
   ThreadAttachments: TStringList;
 begin
-  if FIsRequestActive then
-  begin
-    // L'utilisateur a cliqué sur "Arrêter"
-    if Assigned(FProvider) then
-      FProvider.CancelRequest;
-    AddChatMsg('Système', '🛑 Requête annulée par l''utilisateur.', False);
-    FIsRequestActive := False;
-    SetUIBusy(False);
-    Exit;
-  end;
-
   if Trim(memoPrompt.Text) = '' then Exit;
   
   if not Assigned(FProvider) then
@@ -1167,6 +1171,18 @@ begin
     end;
   finally
     OpenDlg.Free;
+  end;
+end;
+
+procedure TDockableLLMForm.btnStopClick(Sender: TObject);
+begin
+  if FIsRequestActive then
+  begin
+    if Assigned(FProvider) then
+      FProvider.CancelRequest;
+    AddChatMsg('Système', '🛑 Requête annulée par l''utilisateur.', False);
+    FIsRequestActive := False;
+    SetUIBusy(False);
   end;
 end;
 
