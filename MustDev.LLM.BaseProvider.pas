@@ -32,6 +32,7 @@ type
     
     procedure InitProvider(const AEndpoint, AApiKey: string; const AModel: string); virtual;
     function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string; virtual; abstract;
+    procedure CancelRequest; virtual;
     procedure ClearHistory; virtual;
     
     property ProviderType: TProviderType read GetProviderType;
@@ -64,6 +65,11 @@ end;
 function TBaseLLMProvider.GetModelName: string;
 begin
   Result := FModel;
+end;
+
+procedure TBaseLLMProvider.CancelRequest;
+begin
+  // A implémenter dans les classes dérivées
 end;
 
 procedure TBaseLLMProvider.ClearHistory;

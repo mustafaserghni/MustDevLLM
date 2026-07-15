@@ -19,11 +19,13 @@ type
   TCloudRESTLLMProvider = class(TBaseLLMProvider)
   private
     FCloudType: Integer; // 0=OpenAI/Standard, 1=Gemini, 2=Claude
+    FActiveRequest: TRESTRequest;
   protected
     function GetProviderType: TProviderType; override;
   public
     procedure SetCloudType(ACloudType: Integer);
     function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string; override;
+    procedure CancelRequest; override;
     
     // Récupération dynamique des modèles pour les services Cloud
     class function FetchModels(ACloudType: Integer; const AEndpoint, AApiKey: string): TArray<string>;
@@ -156,6 +158,7 @@ begin
   RestClient.ConnectTimeout := 60000;
   RestClient.ReadTimeout := 120000;
   RestRequest := TRESTRequest.Create(nil);
+  FActiveRequest := RestRequest;
   RestResponse := TRESTResponse.Create(nil);
   JSONPayload := TJSONObject.Create;
   try
@@ -419,10 +422,22 @@ begin
         [RestResponse.StatusCode, RestResponse.StatusText, RestResponse.Content]);
 
   finally
+    FActiveRequest := nil;
     JSONPayload.Free;
     RestResponse.Free;
     RestRequest.Free;
     RestClient.Free;
+  end;
+end;
+
+procedure TCloudRESTLLMProvider.CancelRequest;
+begin
+  if Assigned(FActiveRequest) then
+  begin
+    try
+      FActiveRequest.Cancel;
+    except
+    end;
   end;
 end;
 

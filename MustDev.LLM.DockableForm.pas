@@ -50,6 +50,7 @@ type
     btnCreateUnit: TToolButton;
     btnAttach: TToolButton;
     FAttachments: TStringList;
+    FIsRequestActive: Boolean;
     
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
@@ -246,6 +247,7 @@ begin
   SaveStateNecessary := True;
   FWebChat := nil;
   FAttachments := TStringList.Create;
+  FIsRequestActive := False;
 end;
 
 destructor TDockableLLMForm.Destroy;
@@ -876,7 +878,7 @@ end;
 
 procedure TDockableLLMForm.SetUIBusy(IsBusy: Boolean);
 begin
-  btnAsk.Enabled := not IsBusy;
+  btnAsk.Enabled := True; // Reste actif pour permettre l'annulation
   memoPrompt.Enabled := not IsBusy;
   btnClearHistory.Enabled := not IsBusy;
   cbChatMode.Enabled := not IsBusy;
@@ -885,9 +887,11 @@ begin
   cbAgents.Enabled := not IsBusy;
   btnInsertCode.Enabled := not IsBusy;
   btnCreateUnit.Enabled := not IsBusy;
+  btnAttach.Enabled := not IsBusy;
+  
   if IsBusy then
   begin
-    btnAsk.Caption := 'Patience...';
+    btnAsk.Caption := '🛑 Arrêter';
     Screen.Cursor := crHourGlass;
   end
   else
@@ -905,6 +909,17 @@ var
   SelectedAgentName, SelectedAgentRules: string;
   ThreadAttachments: TStringList;
 begin
+  if FIsRequestActive then
+  begin
+    // L'utilisateur a cliqué sur "Arrêter"
+    if Assigned(FProvider) then
+      FProvider.CancelRequest;
+    AddChatMsg('Système', '🛑 Requête annulée par l''utilisateur.', False);
+    FIsRequestActive := False;
+    SetUIBusy(False);
+    Exit;
+  end;
+
   if Trim(memoPrompt.Text) = '' then Exit;
   
   if not Assigned(FProvider) then
@@ -1058,7 +1073,6 @@ begin
             procedure
             begin
               AddChatMsg('Must@Dev AI', ResponseText, False);
-              SetUIBusy(False);
               TLLMLogger.LogSuccess('Réponse du Chat reçue.');
             end));
         except
@@ -1068,14 +1082,22 @@ begin
             System.Classes.TThread.Queue(nil, TThreadProcedure(
               procedure
               begin
-                AddChatMsg('Erreur', ErrMsg, False);
-                SetUIBusy(False);
-                TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', ErrMsg);
+                if FIsRequestActive then
+                begin
+                  AddChatMsg('Erreur', ErrMsg, False);
+                  TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', ErrMsg);
+                end;
               end));
           end;
         end;
       finally
         ThreadAttachments.Free;
+        System.Classes.TThread.Queue(nil, TThreadProcedure(
+          procedure
+          begin
+            FIsRequestActive := False;
+            SetUIBusy(False);
+          end));
       end;
     end).Start;
 end;

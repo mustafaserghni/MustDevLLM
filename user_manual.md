@@ -55,6 +55,7 @@ Pour assurer un contrôle total au développeur, la barre d'outils du Chat compr
 - **Joindre 📎** : Permet au développeur d'importer des fichiers et des images depuis sa machine locale pour enrichir la conversation :
   - **Fichiers textuels** (`.pas`, `.dpr`, `.txt`, `.json`, `.md`...) : Le contenu du fichier est automatiquement lu et injecté en tant que contexte délimité directement dans votre prompt utilisateur.
   - **Images** (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`) : Les images sont converties de manière sécurisée en Base64 et incluses dans la structure de données de requêtes pour les modèles d'IA dotés de facultés multimodales (Gemini, Claude, OpenAI, Ollama).
+- **Arrêter la session 🛑 (Bouton d'annulation)** : Pendant que l'assistant interroge le LLM, le curseur passe en sablier pour indiquer le travail en cours, et le bouton *Envoyer* se transforme en bouton **`🛑 Arrêter`**. Cliquer dessus interrompt instantanément l'appel réseau actif de manière sécurisée (par fermeture/avortement du socket HTTP pour Ollama/LM Studio ou annulation de l'appel REST pour Gemini/Claude/OpenAI), libère la mémoire et débloque l'interface.
 
 ### Thématisation Adaptative Automatique :
 L'interface détecte dynamiquement si l'IDE est configuré en mode clair ou sombre (calcul de luminance relative sur `clWindow` du style VCL actif).

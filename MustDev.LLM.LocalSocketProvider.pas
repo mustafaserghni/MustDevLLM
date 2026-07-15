@@ -17,10 +17,14 @@ uses
 
 type
   TLocalSocketLLMProvider = class(TBaseLLMProvider)
+  private
+    FIsCancelled: Boolean;
+    procedure HttpReceiveData(const Sender: TObject; AContentLength, AReadCount: Int64; var AAbort: Boolean);
   protected
     function GetProviderType: TProviderType; override;
   public
     function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string; override;
+    procedure CancelRequest; override;
     
     // Interroge l'API locale (Ollama ou LM Studio) pour lister les modèles installés
     class function FetchModels(const AEndpoint: string): TArray<string>;
@@ -123,6 +127,8 @@ begin
   end;
 
   Http := THTTPClient.Create;
+  Http.OnReceiveData := HttpReceiveData;
+  FIsCancelled := False;
   Http.ConnectionTimeout := 60000;
   Http.ResponseTimeout := 120000;
   JSONPayload := TJSONObject.Create;
@@ -283,6 +289,16 @@ begin
     JSONPayload.Free;
     Http.Free;
   end;
+end;
+
+procedure TLocalSocketLLMProvider.CancelRequest;
+begin
+  FIsCancelled := True;
+end;
+
+procedure TLocalSocketLLMProvider.HttpReceiveData(const Sender: TObject; AContentLength, AReadCount: Int64; var AAbort: Boolean);
+begin
+  AAbort := FIsCancelled;
 end;
 
 class function TLocalSocketLLMProvider.FetchModels(const AEndpoint: string): TArray<string>;

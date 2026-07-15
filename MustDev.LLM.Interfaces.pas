@@ -33,6 +33,9 @@ type
     // Méthode principale pour envoyer un prompt et récupérer une réponse (avec ou sans historique et pièces jointes)
     function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string;
     
+    // Annule la requête en cours
+    procedure CancelRequest;
+    
     // Efface l'historique de la conversation
     procedure ClearHistory;
     
