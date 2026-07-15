@@ -48,6 +48,8 @@ type
     cbAgents: TComboBox;
     btnInsertCode: TToolButton;
     btnCreateUnit: TToolButton;
+    btnAttach: TToolButton;
+    FAttachments: TStringList;
     
     procedure InitProvider;
     procedure AddChatMsg(const ASender, AMessage: string; IsUser: Boolean);
@@ -57,6 +59,8 @@ type
     // Actions rapides sur le code Delphi
     procedure cbQuickActionsChange(Sender: TObject);
     // Récupération de l'unité de travail actuelle dans l'éditeur de l'IDE
+    // Pièces jointes
+    procedure btnAttachClick(Sender: TObject);
     function GetActiveEditorCode(out AFileName: string): string;
     
     // Chargement de la liste des agents standard et utilisateur (*.md)
@@ -72,6 +76,7 @@ type
     procedure ApplyIDETheme;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
 var
@@ -240,6 +245,13 @@ begin
   AutoSave := True;
   SaveStateNecessary := True;
   FWebChat := nil;
+  FAttachments := TStringList.Create;
+end;
+
+destructor TDockableLLMForm.Destroy;
+begin
+  FAttachments.Free;
+  inherited Destroy;
 end;
 
 function TDockableLLMForm.IsIDEDarkMode: Boolean;
@@ -558,6 +570,17 @@ begin
   btnCreateUnit.Hint := 'Créer un nouveau fichier contenant le code sélectionné ou généré';
   btnCreateUnit.ShowHint := True;
   btnCreateUnit.OnClick := btnCreateUnitClick;
+  
+  var Sep3 := TToolButton.Create(Self);
+  Sep3.Parent := ToolBar1;
+  Sep3.Style := tbsSeparator;
+  
+  btnAttach := TToolButton.Create(Self);
+  btnAttach.Parent := ToolBar1;
+  btnAttach.Caption := ' 📎 Joindre ';
+  btnAttach.Hint := 'Joindre des fichiers ou des images à la conversation';
+  btnAttach.ShowHint := True;
+  btnAttach.OnClick := btnAttachClick;
 
   // Masquer la case à cocher contextuelle statique
   chkOptimizeContext.Visible := False;
@@ -576,7 +599,7 @@ begin
   chkIncludeActiveUnit := TCheckBox.Create(Self);
   chkIncludeActiveUnit.Parent := pnlInputActions;
   chkIncludeActiveUnit.Caption := 'Inclure l''unité active de l''IDE';
-  chkIncludeActiveUnit.Width := 190;
+  chkIncludeActiveUnit.Width := 200;
   chkIncludeActiveUnit.Left := 215;
   chkIncludeActiveUnit.Top := 6;
   chkIncludeActiveUnit.Checked := True;
@@ -880,6 +903,7 @@ var
   LocalProvider: ILLMProvider; // Copie locale pour garantir la thread-safety
   ActiveFileCode, ActiveFileName: string;
   SelectedAgentName, SelectedAgentRules: string;
+  ThreadAttachments: TStringList;
 begin
   if Trim(memoPrompt.Text) = '' then Exit;
   
@@ -1012,6 +1036,10 @@ begin
   
   LocalProvider := FProvider; // Incrémente le compteur de références et protège l'instance dans le thread
   
+  ThreadAttachments := TStringList.Create;
+  ThreadAttachments.Assign(FAttachments);
+  FAttachments.Clear;
+  
   // Multithreading : Exécution en arrière-plan
   TThread.CreateAnonymousThread(
     procedure
@@ -1019,31 +1047,35 @@ begin
       ResponseText, FinalPrompt: string;
     begin
       try
-        // Optimisation du prompt via TPromptOptimizer avec les regles de l'agent selectionne
-        FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, ActiveFileCode, SelectedAgentRules);
+        try
+          // Optimisation du prompt via TPromptOptimizer avec les regles de l'agent selectionne
+          FinalPrompt := TPromptOptimizer.Optimize(UserPrompt, ActiveFileCode, SelectedAgentRules);
+            
+          ResponseText := LocalProvider.Ask(FinalPrompt, True, ThreadAttachments);
           
-        ResponseText := LocalProvider.Ask(FinalPrompt, True);
-        
-        // Cast explicite TThreadProcedure pour lever toute ambiguïté de surcharge de Queue
-        System.Classes.TThread.Queue(nil, TThreadProcedure(
-          procedure
-          begin
-            AddChatMsg('Must@Dev AI', ResponseText, False);
-            SetUIBusy(False);
-            TLLMLogger.LogSuccess('Réponse du Chat reçue.');
-          end));
-      except
-        on E: Exception do
-        begin
-          var ErrMsg := E.Message;
+          // Cast explicite TThreadProcedure pour lever toute ambiguïté de surcharge de Queue
           System.Classes.TThread.Queue(nil, TThreadProcedure(
             procedure
             begin
-              AddChatMsg('Erreur', ErrMsg, False);
+              AddChatMsg('Must@Dev AI', ResponseText, False);
               SetUIBusy(False);
-              TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', ErrMsg);
+              TLLMLogger.LogSuccess('Réponse du Chat reçue.');
             end));
+        except
+          on E: Exception do
+          begin
+            var ErrMsg := E.Message;
+            System.Classes.TThread.Queue(nil, TThreadProcedure(
+              procedure
+              begin
+                AddChatMsg('Erreur', ErrMsg, False);
+                SetUIBusy(False);
+                TLLMLogger.LogError('Erreur de réponse LLM dans le Chat', ErrMsg);
+              end));
+          end;
         end;
+      finally
+        ThreadAttachments.Free;
       end;
     end).Start;
 end;
@@ -1084,6 +1116,34 @@ begin
   end;
   
   InitProvider;
+end;
+
+procedure TDockableLLMForm.btnAttachClick(Sender: TObject);
+var
+  OpenDlg: TOpenDialog;
+  I: Integer;
+begin
+  OpenDlg := TOpenDialog.Create(Self);
+  try
+    OpenDlg.Options := OpenDlg.Options + [ofAllowMultiSelect, ofFileMustExist];
+    OpenDlg.Filter := 'Tous les fichiers supportés|*.pas;*.dpr;*.txt;*.xml;*.json;*.html;*.css;*.md;*.jpg;*.jpeg;*.png;*.gif;*.webp;*.pdf|' +
+                      'Fichiers Delphi (*.pas;*.dpr)|*.pas;*.dpr|' +
+                      'Images (*.jpg;*.jpeg;*.png;*.gif;*.webp)|*.jpg;*.jpeg;*.png;*.gif;*.webp|' +
+                      'Tous les fichiers (*.*)|*.*';
+    if OpenDlg.Execute then
+    begin
+      for I := 0 to OpenDlg.Files.Count - 1 do
+      begin
+        if FAttachments.IndexOf(OpenDlg.Files[I]) < 0 then
+        begin
+          FAttachments.Add(OpenDlg.Files[I]);
+          AddChatMsg('Système', '📎 Fichier joint : ' + ExtractFileName(OpenDlg.Files[I]), False);
+        end;
+      end;
+    end;
+  finally
+    OpenDlg.Free;
+  end;
 end;
 
 end.

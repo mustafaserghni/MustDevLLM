@@ -38,6 +38,11 @@ Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE De
   - **Bouton Insérer (📥)** : Injectez le code sélectionné ou le dernier bloc généré par le chat directement dans votre éditeur de code.
   - **Bouton Nouvelle Unité (📄)** : Créez une nouvelle unité Delphi vierge dans l'IDE contenant le code généré en un seul clic via les services natifs de RAD Studio.
 
+- 📎 **Envoi de fichiers et d'images (Multimodalité)** :
+  - **Bouton Joindre (📎)** : Permet de sélectionner un ou plusieurs fichiers ou images locaux à envoyer à la conversation.
+  - Les fichiers de code source et textes (`.pas`, `.txt`, `.json`, `.md`...) sont **injectés intelligemment** dans le contexte du prompt.
+  - Les images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`) sont **encodées en Base64** et transmises directement aux modèles supportant le multimodal (Gemini, Claude, OpenAI, Ollama).
+
 - 📊 **Outils de Diagrammes UML Mermaid** :
   - Traduisez instantanément votre code Delphi actif ou sélectionné en diagrammes UML ou de flux au format Mermaid.
   - Génération de **Diagrammes de Classes de l'Unité** (`classDiagram`), **Diagrammes de Séquence** (`sequenceDiagram`), **Flowchart Global de l'Unité** (`graph TD`), **Flowchart détaillé d'une Procédure/Fonction** avec ses boucles/conditions, **Diagrammes d'État** (`stateDiagram-v2`), et **Diagrammes d'Activité** (`graph TB`).

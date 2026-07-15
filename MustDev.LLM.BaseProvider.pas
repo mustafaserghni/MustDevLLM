@@ -31,7 +31,7 @@ type
     destructor Destroy; override;
     
     procedure InitProvider(const AEndpoint, AApiKey: string; const AModel: string); virtual;
-    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string; virtual; abstract;
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string; virtual; abstract;
     procedure ClearHistory; virtual;
     
     property ProviderType: TProviderType read GetProviderType;

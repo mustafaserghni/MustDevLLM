@@ -35,7 +35,7 @@ object DockableLLMForm: TDockableLLMForm
     List = True
     ShowCaptions = True
     TabOrder = 0
-    ExplicitWidth = 394
+    ExplicitWidth = 820
     object btnSettings: TToolButton
       Left = 0
       Top = 0
@@ -73,7 +73,7 @@ object DockableLLMForm: TDockableLLMForm
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 394
+    ExplicitWidth = 820
     object lblSource: TLabel
       Left = 8
       Top = 8
@@ -103,8 +103,8 @@ object DockableLLMForm: TDockableLLMForm
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 2
-    ExplicitWidth = 394
-    ExplicitHeight = 242
+    ExplicitWidth = 820
+    ExplicitHeight = 615
   end
   object pnlBottom: TPanel
     Left = 0
@@ -114,8 +114,8 @@ object DockableLLMForm: TDockableLLMForm
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitTop = 306
-    ExplicitWidth = 394
+    ExplicitTop = 679
+    ExplicitWidth = 820
     object pnlInputActions: TPanel
       Left = 0
       Top = 115
@@ -124,7 +124,7 @@ object DockableLLMForm: TDockableLLMForm
       Align = alBottom
       BevelOuter = bvNone
       TabOrder = 0
-      ExplicitWidth = 394
+      ExplicitWidth = 820
       object chkOptimizeContext: TCheckBox
         Left = 8
         Top = 6
@@ -144,7 +144,7 @@ object DockableLLMForm: TDockableLLMForm
       Align = alClient
       ScrollBars = ssVertical
       TabOrder = 1
-      ExplicitWidth = 314
+      ExplicitWidth = 740
     end
     object btnAsk: TButton
       Left = 746
@@ -161,7 +161,7 @@ object DockableLLMForm: TDockableLLMForm
       ParentFont = False
       TabOrder = 2
       OnClick = btnAskClick
-      ExplicitLeft = 314
+      ExplicitLeft = 740
     end
   end
 end

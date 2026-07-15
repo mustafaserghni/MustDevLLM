@@ -11,7 +11,7 @@ unit MustDev.LLM.LocalSocketProvider;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.JSON,
+  System.Classes, System.SysUtils, System.JSON, System.IOUtils, System.NetEncoding,
   System.Net.Socket, System.Net.HttpClient,
   MustDev.LLM.Interfaces, MustDev.LLM.BaseProvider;
 
@@ -20,7 +20,7 @@ type
   protected
     function GetProviderType: TProviderType; override;
   public
-    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string; override;
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string; override;
     
     // Interroge l'API locale (Ollama ou LM Studio) pour lister les modèles installés
     class function FetchModels(const AEndpoint: string): TArray<string>;
@@ -35,7 +35,53 @@ begin
   Result := ptLocalSocket;
 end;
 
-function TLocalSocketLLMProvider.Ask(const APrompt: string; AKeepHistory: Boolean = False): string;
+function IsImageFile(const AFileName: string): Boolean;
+var
+  Ext: string;
+begin
+  Ext := LowerCase(ExtractFileExt(AFileName));
+  Result := (Ext = '.jpg') or (Ext = '.jpeg') or (Ext = '.png') or (Ext = '.gif') or (Ext = '.webp');
+end;
+
+function IsTextFile(const AFileName: string): Boolean;
+var
+  Ext: string;
+begin
+  Ext := LowerCase(ExtractFileExt(AFileName));
+  Result := (Ext = '.pas') or (Ext = '.dpr') or (Ext = '.txt') or (Ext = '.xml') or (Ext = '.json') or (Ext = '.html') or (Ext = '.css') or (Ext = '.md');
+end;
+
+function GetMimeType(const AFileName: string): string;
+var
+  Ext: string;
+begin
+  Ext := LowerCase(ExtractFileExt(AFileName));
+  if (Ext = '.jpg') or (Ext = '.jpeg') then Result := 'image/jpeg'
+  else if Ext = '.png' then Result := 'image/png'
+  else if Ext = '.gif' then Result := 'image/gif'
+  else if Ext = '.webp' then Result := 'image/webp'
+  else if Ext = '.pdf' then Result := 'application/pdf'
+  else Result := 'application/octet-stream';
+end;
+
+function FileToBase64(const AFileName: string): string;
+var
+  MS: TMemoryStream;
+begin
+  Result := '';
+  MS := TMemoryStream.Create;
+  try
+    MS.LoadFromFile(AFileName);
+    Result := TNetEncoding.Base64.EncodeBytesToString(MS.Memory, MS.Size);
+    Result := StringReplace(Result, sLineBreak, '', [rfReplaceAll]);
+    Result := StringReplace(Result, #10, '', [rfReplaceAll]);
+    Result := StringReplace(Result, #13, '', [rfReplaceAll]);
+  finally
+    MS.Free;
+  end;
+end;
+
+function TLocalSocketLLMProvider.Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string;
 var
   Http: THTTPClient;
   Resp: IHTTPResponse;
@@ -46,11 +92,39 @@ var
   Msg: TLLMMessage;
   TargetURL: string;
   IsOllamaChat: Boolean;
+  FinalPrompt: string;
+  HasImages: Boolean;
+  AttachmentPath: string;
+  I: Integer;
 begin
   Result := '';
+  FinalPrompt := APrompt;
+  HasImages := False;
+  
+  // Analyse des pièces jointes
+  if Assigned(AAttachments) then
+  begin
+    for I := 0 to AAttachments.Count - 1 do
+    begin
+      AttachmentPath := AAttachments[I];
+      if TFile.Exists(AttachmentPath) then
+      begin
+        if IsImageFile(AttachmentPath) then
+          HasImages := True
+        else if IsTextFile(AttachmentPath) then
+        begin
+          FinalPrompt := FinalPrompt + sLineBreak + sLineBreak + 
+            '=== PIECE JOINTE : ' + ExtractFileName(AttachmentPath) + ' ===' + sLineBreak + 
+            TFile.ReadAllText(AttachmentPath, TEncoding.UTF8) + sLineBreak +
+            '==============================' + sLineBreak;
+        end;
+      end;
+    end;
+  end;
+
   Http := THTTPClient.Create;
-  Http.ConnectionTimeout := 60000; // 60 secondes max pour se connecter
-  Http.ResponseTimeout := 120000;   // 120 secondes max pour attendre la réponse
+  Http.ConnectionTimeout := 60000;
+  Http.ResponseTimeout := 120000;
   JSONPayload := TJSONObject.Create;
   try
     JSONPayload.AddPair('model', FModel);
@@ -84,9 +158,57 @@ begin
       
       MessageObj := TJSONObject.Create;
       MessageObj.AddPair('role', 'user');
-      MessageObj.AddPair('content', APrompt);
-      MessagesArray.AddElement(MessageObj);
       
+      if IsOllamaChat then
+      begin
+        MessageObj.AddPair('content', FinalPrompt);
+        if HasImages and Assigned(AAttachments) then
+        begin
+          var ImagesArray := TJSONArray.Create;
+          for I := 0 to AAttachments.Count - 1 do
+          begin
+            AttachmentPath := AAttachments[I];
+            if IsImageFile(AttachmentPath) and TFile.Exists(AttachmentPath) then
+              ImagesArray.Add(FileToBase64(AttachmentPath));
+          end;
+          MessageObj.AddPair('images', ImagesArray);
+        end;
+      end
+      else // OpenAI-compatible (/v1/)
+      begin
+        if HasImages then
+        begin
+          var ContentArray := TJSONArray.Create;
+          
+          var TextObj := TJSONObject.Create;
+          TextObj.AddPair('type', 'text');
+          TextObj.AddPair('text', FinalPrompt);
+          ContentArray.AddElement(TextObj);
+          
+          if Assigned(AAttachments) then
+          begin
+            for I := 0 to AAttachments.Count - 1 do
+            begin
+              AttachmentPath := AAttachments[I];
+              if IsImageFile(AttachmentPath) and TFile.Exists(AttachmentPath) then
+              begin
+                var ImageUrlObj := TJSONObject.Create;
+                ImageUrlObj.AddPair('url', 'data:' + GetMimeType(AttachmentPath) + ';base64,' + FileToBase64(AttachmentPath));
+                
+                var ImageObj := TJSONObject.Create;
+                ImageObj.AddPair('type', 'image_url');
+                ImageObj.AddPair('image_url', ImageUrlObj);
+                ContentArray.AddElement(ImageObj);
+              end;
+            end;
+          end;
+          MessageObj.AddPair('content', ContentArray);
+        end
+        else
+          MessageObj.AddPair('content', FinalPrompt);
+      end;
+      
+      MessagesArray.AddElement(MessageObj);
       JSONPayload.AddPair('messages', MessagesArray);
       
       if IsOllamaChat then
@@ -95,7 +217,18 @@ begin
     else
     begin
       // Format de complétion classique (sans historique)
-      JSONPayload.AddPair('prompt', APrompt);
+      JSONPayload.AddPair('prompt', FinalPrompt);
+      if HasImages and Assigned(AAttachments) then
+      begin
+        var ImagesArray := TJSONArray.Create;
+        for I := 0 to AAttachments.Count - 1 do
+        begin
+          AttachmentPath := AAttachments[I];
+          if IsImageFile(AttachmentPath) and TFile.Exists(AttachmentPath) then
+            ImagesArray.Add(FileToBase64(AttachmentPath));
+        end;
+        JSONPayload.AddPair('images', ImagesArray);
+      end;
       JSONPayload.AddPair('stream', TJSONBool.Create(False));
     end;
     

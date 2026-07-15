@@ -52,6 +52,9 @@ L'assistant est accessible via le menu **`Must@Dev` ➔ `AI Assistant...`**. Il 
 Pour assurer un contrôle total au développeur, la barre d'outils du Chat comprend deux boutons d'interaction synchrone :
 - **Insérer 📥** : Récupère le code sélectionné ou le dernier bloc de code pascal généré dans l'historique et l'insère immédiatement à l'emplacement du curseur actif dans l'éditeur RAD Studio.
 - **Nouvelle unité 📄** : Instancie instantanément un nouvel onglet de code source vierge dans RAD Studio et y injecte le code issu du chat à l'aide d'un créateur de module natif (`IOTAModuleCreator`).
+- **Joindre 📎** : Permet au développeur d'importer des fichiers et des images depuis sa machine locale pour enrichir la conversation :
+  - **Fichiers textuels** (`.pas`, `.dpr`, `.txt`, `.json`, `.md`...) : Le contenu du fichier est automatiquement lu et injecté en tant que contexte délimité directement dans votre prompt utilisateur.
+  - **Images** (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`) : Les images sont converties de manière sécurisée en Base64 et incluses dans la structure de données de requêtes pour les modèles d'IA dotés de facultés multimodales (Gemini, Claude, OpenAI, Ollama).
 
 ### Thématisation Adaptative Automatique :
 L'interface détecte dynamiquement si l'IDE est configuré en mode clair ou sombre (calcul de luminance relative sur `clWindow` du style VCL actif).

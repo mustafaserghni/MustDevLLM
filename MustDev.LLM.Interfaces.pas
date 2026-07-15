@@ -30,8 +30,8 @@ type
     // Initialise le fournisseur avec ses paramètres (URL, Port ou Clé API)
     procedure InitProvider(const AEndpoint, AApiKey: string; const AModel: string);
     
-    // Méthode principale pour envoyer un prompt et récupérer une réponse (avec ou sans historique)
-    function Ask(const APrompt: string; AKeepHistory: Boolean = False): string;
+    // Méthode principale pour envoyer un prompt et récupérer une réponse (avec ou sans historique et pièces jointes)
+    function Ask(const APrompt: string; AKeepHistory: Boolean = False; const AAttachments: TStrings = nil): string;
     
     // Efface l'historique de la conversation
     procedure ClearHistory;
