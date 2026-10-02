@@ -12,6 +12,7 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.JSON, System.IOUtils, System.NetEncoding,
+  System.Generics.Collections,
   REST.Types, REST.Client, System.Net.HttpClient,
   MustDev.LLM.Interfaces, MustDev.LLM.BaseProvider;
 
@@ -361,6 +362,21 @@ begin
         ParamAuth.Kind := pkHTTPHEADER;
         ParamAuth.Options := [poDoNotEncode];
       end;
+      
+      if Pos('openrouter.ai', TargetURL) > 0 then
+      begin
+        var ParamRef := RestRequest.Params.AddItem;
+        ParamRef.Name := 'HTTP-Referer';
+        ParamRef.Value := 'https://github.com/mustafaserghni/MustDevLLM';
+        ParamRef.Kind := pkHTTPHEADER;
+        ParamRef.Options := [poDoNotEncode];
+
+        var ParamTitle := RestRequest.Params.AddItem;
+        ParamTitle.Name := 'X-Title';
+        ParamTitle.Value := 'MustDev AI';
+        ParamTitle.Kind := pkHTTPHEADER;
+        ParamTitle.Options := [poDoNotEncode];
+      end;
     end;
 
     RestRequest.AddBody(JSONPayload.ToString, ctAPPLICATION_JSON);
@@ -491,13 +507,18 @@ begin
         Exit;
       end;
       
-      // Standard OpenAI / DeepSeek / Qwen
+      // Standard OpenAI / OpenRouter / DeepSeek / Qwen
       if ACloudType = 0 then 
       begin
         // Remplacer chat/completions par models
         BaseURL := StringReplace(BaseURL, '/chat/completions', '/models', [rfIgnoreCase]);
         if CleanApiKey <> '' then
           Http.CustomHeaders['Authorization'] := 'Bearer ' + CleanApiKey;
+        if Pos('openrouter.ai', BaseURL) > 0 then
+        begin
+          Http.CustomHeaders['HTTP-Referer'] := 'https://github.com/mustafaserghni/MustDevLLM';
+          Http.CustomHeaders['X-Title'] := 'MustDev AI';
+        end;
       end;
       
       Resp := Http.Get(BaseURL);
@@ -513,21 +534,50 @@ begin
             
           if Assigned(ModelsArray) then
           begin
-            SetLength(Result, ModelsArray.Count);
-            for I := 0 to ModelsArray.Count - 1 do
+            if Pos('openrouter.ai', BaseURL) > 0 then
             begin
-              var ModelObj := ModelsArray.Items[I] as TJSONObject;
-              if ACloudType = 1 then
+              var FreeList := TList<string>.Create;
+              var OtherList := TList<string>.Create;
+              try
+                FreeList.Add('openrouter/free');
+                for I := 0 to ModelsArray.Count - 1 do
+                begin
+                  var ModelObj := ModelsArray.Items[I] as TJSONObject;
+                  var ModelId := ModelObj.GetValue<string>('id');
+                  if ModelId.EndsWith(':free') then
+                    FreeList.Add(ModelId)
+                  else
+                    OtherList.Add(ModelId);
+                end;
+                
+                SetLength(Result, FreeList.Count + OtherList.Count);
+                for I := 0 to FreeList.Count - 1 do
+                  Result[I] := FreeList[I];
+                for I := 0 to OtherList.Count - 1 do
+                  Result[FreeList.Count + I] := OtherList[I];
+              finally
+                FreeList.Free;
+                OtherList.Free;
+              end;
+            end
+            else
+            begin
+              SetLength(Result, ModelsArray.Count);
+              for I := 0 to ModelsArray.Count - 1 do
               begin
-                // Gemini retourne "models/gemini-1.5-flash", on garde la partie après models/
-                var FullName := ModelObj.GetValue<string>('name');
-                if Pos('models/', FullName) > 0 then
-                  Result[I] := Copy(FullName, Pos('models/', FullName) + 7, Length(FullName))
+                var ModelObj := ModelsArray.Items[I] as TJSONObject;
+                if ACloudType = 1 then
+                begin
+                  // Gemini retourne "models/gemini-1.5-flash", on garde la partie après models/
+                  var FullName := ModelObj.GetValue<string>('name');
+                  if Pos('models/', FullName) > 0 then
+                    Result[I] := Copy(FullName, Pos('models/', FullName) + 7, Length(FullName))
+                  else
+                    Result[I] := FullName;
+                end
                 else
-                  Result[I] := FullName;
-              end
-              else
-                Result[I] := ModelObj.GetValue<string>('id');
+                  Result[I] := ModelObj.GetValue<string>('id');
+              end;
             end;
           end;
         finally

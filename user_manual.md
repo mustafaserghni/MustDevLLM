@@ -32,14 +32,15 @@ Pour configurer l'extension, allez dans le menu supérieur de RAD Studio : **`Mu
 La liste déroulante **"Profil Rapide"** pré-configure instantanément les paramètres selon le service choisi :
 1. **Ollama** : URL locale par défaut (`http://127.0.0.1:11434/api/generate`).
 2. **LM Studio** : URL locale standardisée (`http://127.0.0.1:1234/v1/chat/completions`).
-3. **OpenAI** : URL officielle de complétion de chat.
-4. **Google Gemini** : URL officielle sécurisée par clé en paramètre de requête.
-5. **Anthropic Claude** : URL de messages Anthropic sécurisée par en-têtes HTTP.
-6. **Alibaba Qwen** : URL du mode compatible DashScope.
-7. **DeepSeek** : URL officielle du service DeepSeek.
+3. **OpenRouter** : URL officielle (`https://openrouter.ai/api/v1/chat/completions`). Donne accès à un vaste catalogue de **modèles gratuits** sans abonnement (avec une clé d'API gratuite OpenRouter) tels que `openrouter/free`, `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `qwen/qwen-2.5-coder-32b-instruct:free`, `google/gemini-2.0-flash-exp:free`, etc.
+4. **OpenAI** : URL officielle de complétion de chat.
+5. **Google Gemini** : URL officielle sécurisée par clé en paramètre de requête.
+6. **Anthropic Claude** : URL de messages Anthropic sécurisée par en-têtes HTTP.
+7. **Alibaba Qwen** : URL du mode compatible DashScope.
+8. **DeepSeek** : URL officielle du service DeepSeek.
 
 #### C. Récupération Dynamique des Modèles (`🔄 Actualiser`)
-- Cliquez sur le bouton **`Actualiser`** à côté de la liste des modèles pour interroger dynamiquement le fournisseur et lister tous les modèles disponibles.
+- Cliquez sur le bouton **`Actualiser`** à côté de la liste des modèles pour interroger dynamiquement le fournisseur et lister tous les modèles disponibles. Pour OpenRouter, l'extension place automatiquement tous les modèles gratuits (`:free`) en tête de liste !
 - Sélectionnez le modèle cible dans la liste, ou saisissez-en un manuellement.
 
 ---

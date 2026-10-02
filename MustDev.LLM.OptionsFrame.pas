@@ -300,6 +300,22 @@ begin
         cbModel.Items.Add('deepseek-coder');
         cbModel.ItemIndex := 0;
       end;
+    7: // OpenRouter (Cloud - Modèles gratuits)
+      begin
+        rgProviderType.ItemIndex := 1;
+        edtEndpoint.Text := 'https://openrouter.ai/api/v1/chat/completions';
+        cbCloudType.ItemIndex := 0;
+        cbModel.Items.Add('openrouter/free');
+        cbModel.Items.Add('meta-llama/llama-3.3-70b-instruct:free');
+        cbModel.Items.Add('deepseek/deepseek-r1:free');
+        cbModel.Items.Add('deepseek/deepseek-chat:free');
+        cbModel.Items.Add('qwen/qwen-2.5-coder-32b-instruct:free');
+        cbModel.Items.Add('google/gemini-2.0-flash-exp:free');
+        cbModel.Items.Add('mistralai/mistral-small-24b-instruct-2501:free');
+        cbModel.Items.Add('meta-llama/llama-3.2-3b-instruct:free');
+        cbModel.Items.Add('microsoft/phi-3-medium-128k-instruct:free');
+        cbModel.ItemIndex := 0;
+      end;
   end;
   rgProviderTypeClick(nil);
 end;

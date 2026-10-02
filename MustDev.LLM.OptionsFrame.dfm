@@ -103,7 +103,8 @@ object LLMOptionsFrame: TLLMOptionsFrame
             'Google Gemini (Cloud)'
             'Anthropic Claude (Cloud)'
             'Alibaba Qwen (Cloud Compatible)'
-            'DeepSeek (Cloud Compatible)')
+            'DeepSeek (Cloud Compatible)'
+            'OpenRouter (Cloud - Modeles gratuits)')
         end
         object edtEndpoint: TEdit
           Left = 90

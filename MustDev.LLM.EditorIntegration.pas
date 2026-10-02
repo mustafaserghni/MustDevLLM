@@ -107,6 +107,7 @@ var
   LEndpoint, LApiKey, LModel: string;
 begin
   LType := ptLocalSocket;
+  var LCloudType: Integer := 0;
   LEndpoint := '';
   LModel := '';
   
@@ -117,6 +118,8 @@ begin
     begin
       if Reg.ValueExists('ProviderType') then
         LType := TProviderType(Reg.ReadInteger('ProviderType'));
+      if Reg.ValueExists('CloudType') then
+        LCloudType := Reg.ReadInteger('CloudType');
       if Reg.ValueExists('Endpoint') then
         LEndpoint := Reg.ReadString('Endpoint');
       if Reg.ValueExists('Model') then
@@ -128,7 +131,7 @@ begin
   end;
   
   LApiKey := TSecurityUtils.LoadApiKey('GlobalAPIKey');
-  Result := TLLMProviderFactory.CreateProvider(LType, LEndpoint, LApiKey, LModel);
+  Result := TLLMProviderFactory.CreateProvider(LType, LEndpoint, LApiKey, LModel, LCloudType);
 end;
 
 procedure TMustDevEditorBinding.DoLLMAction(const Context: IOTAKeyContext; const APrompt: string);

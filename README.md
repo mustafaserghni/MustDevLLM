@@ -53,11 +53,12 @@ Bienvenue dans **Must@Dev AI**, une extension de niveau entreprise pour l'IDE De
   - Bascule automatique entre le mode clair standard et un mode sombre premium moderne (fond anthracite `$1E1E1E`, textes clairs `$E0E0E0`, nuances pastel bleu et vert pour les bulles de discussion).
 
 - 🧠 **Multi-Fournisseurs Avancé & Profils Rapides** :
-  - **Profils préconfigurés** : Sélectionnez en 1 clic vos configurations pour *Ollama (Local)*, *LM Studio (Local)*, *OpenAI*, *Google Gemini*, *Anthropic Claude*, *Alibaba Qwen*, et *DeepSeek*.
-  - **Détection Automatique des Modèles Locaux** : Un simple clic sur "Actualiser" dans les paramètres interroge votre serveur Ollama ou LM Studio et remplit la liste déroulante avec les modèles réellement installés !
+  - **Profils préconfigurés** : Sélectionnez en 1 clic vos configurations pour *Ollama (Local)*, *LM Studio (Local)*, *OpenRouter (Modèles gratuits)*, *OpenAI*, *Google Gemini*, *Anthropic Claude*, *Alibaba Qwen*, et *DeepSeek*.
+  - **Support d'OpenRouter & Modèles Gratuits** : Accédez directement aux modèles gratuits récents (`openrouter/free`, `meta-llama/llama-3.3-70b-instruct:free`, `deepseek/deepseek-r1:free`, `deepseek/deepseek-chat:free`, `qwen/qwen-2.5-coder-32b-instruct:free`, `google/gemini-2.0-flash-exp:free`, etc.) avec auto-détection et tri prioritaire des modèles gratuits lors de l'actualisation !
+  - **Détection Automatique des Modèles** : Un simple clic sur "Actualiser" dans les paramètres interroge votre serveur (Ollama, LM Studio, OpenRouter, Gemini...) et remplit la liste déroulante avec les modèles disponibles !
   - **Mémoire de Contexte (Conversation History)** : Garde en mémoire le fil de la discussion (jusqu'à 10 messages glissants) pour vous répondre de façon contextuelle.
   - **Asynchrone & Non-Bloquant** : Toutes les requêtes s'exécutent dans des threads d'arrière-plan (`TThread`).
-  - **Indicateur de travail & Bouton d'Arrêt** : Pendant l'attente d'une réponse de l'IA, le curseur passe en sablier et le bouton *Envoyer* se transforme en **`🛑 Arrêter`**. Cliquer dessus interrompt instantanément la connexion réseau active (Ollama, Gemini, Claude, OpenAI) de manière propre.
+  - **Indicateur de travail & Bouton d'Arrêt** : Pendant l'attente d'une réponse de l'IA, le curseur passe en sablier et le bouton dédié **`🛑 Arrêter`** dans la barre d'outils s'active pour interrompre instantanément la connexion réseau active de manière propre.
 
 - ⌨️ **Raccourcis Éditeur Natifs** : 
   - `Ctrl+Alt+Space` : **Autocomplétion**. Sélectionnez un extrait de code, l'IA l'analyse et insère la complétion directement.
